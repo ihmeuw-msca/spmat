@@ -145,3 +145,6 @@ class DLMat:
 
     def logdet(self) -> float:
         return np.log(self.diag).sum() + self.coremat.logdet()
+
+    def __repr__(self) -> str:
+        return f"DLMat(dsize={self.dsize}, lrank={self.lrank})"
