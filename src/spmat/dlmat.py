@@ -71,3 +71,77 @@ class ILMat:
 
     def __repr__(self) -> str:
         return f"ILMat(dsize={self.dsize}, lrank={self.lrank})"
+
+
+class DLMat:
+    def __init__(self,
+                 diag: np.ndarray,
+                 lmat: np.ndarray):
+        self.diag = diag
+        self.lmat = lmat
+        self.check_attr()
+
+        scaled_lmat = self.dscale(self.lmat, by="row", inv=True)
+        self.coremat = ILMat(scaled_lmat)
+
+    @property
+    def dsize(self) -> int:
+        return self.diag.size
+
+    @property
+    def lrank(self) -> int:
+        return min(self.lmat.shape)
+
+    @property
+    def mat(self) -> np.ndarray:
+        return np.diag(self.diag) + self.lmat.dot(self.lmat.T)
+
+    @property
+    def invmat(self) -> np.ndarray:
+        return self.dscale(self.coremat.invmat, inv=True)
+
+    def check_attr(self):
+        if self.diag.ndim != 1:
+            raise ValueError("`diag` has to be a vector.")
+        if self.lmat.ndim != 2:
+            raise ValueError("`lmat` has to be a matrix.")
+        if self.dsize != self.lmat.shape[0]:
+            raise ValueError("`diag` and `lmat` size not match.")
+        if any(self.diag <= 0.0):
+            raise ValueError("`diag` can only contain positive numbers.")
+
+    def dscale(self,
+               array: Iterable,
+               by: str = "both",
+               inv: bool = False) -> np.ndarray:
+        if not isinstance(array, np.ndarray):
+            array = np.asarray(array)
+        if by not in ["row", "col", "both"]:
+            raise ValueError("`by` can only be selected from 'row', 'col' and 'both'.")
+        d = 1/np.sqrt(self.diag) if inv else np.sqrt(self.diag)
+
+        if array.ndim == 1:
+            result = array*d**(2 if by == "both" else 1)
+        elif array.ndim == 2:
+            if by == "row":
+                result = d[:, None]*array
+            elif by == "col":
+                result = array*d
+            else:
+                result = d[:, None]*array*d
+        else:
+            raise ValueError("`array` must be a vector or matrx.")
+        return result
+
+    def dot(self, array: Iterable) -> np.ndarray:
+        return self.dscale(self.coremat.dot(
+            self.dscale(array, by="row")
+        ), by="row")
+
+    def invdot(self, array: Iterable) -> np.ndarray:
+        return self.dscale(self.coremat.invdot(
+            self.dscale(array, by="row", inv=True)
+        ), by="row", inv=True)
+
+    def logdet(self) -> float:
+        return np.log(self.diag).sum() + self.coremat.logdet()
