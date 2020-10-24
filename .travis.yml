@@ -12,5 +12,5 @@ deploy:
     secure: QiBP+jlUYrtboZ7PcSu6CCgZjyC+f0BzdHJKBRaQdu5lOS93Ckm3hKVyIPCUixjjjfdHsIAgrMIF0MP6cKCDXCuaX9UJcWX1nnaq9I5SfsubMLtCxzB2LCDm+WzRFU9+NiQFicaldlRkcGJta9oNoiUV/Tpf+7wJ9EuRbI+sL//ZqLUUVTxVfhcV9+bnVZ5gyjF/OdkOPaLy+U910584y7tcfHDjicq75jKz7XXJVX1uXSbalej8X/FMhpu4krw0oE2PWmdx04Ve5G1UgtdNFokHSjh5rajfJTUbEeub91jsO6cMAhBJThQAgbzZgZuILQEScYEBGlgI0yXeiblavDfRQJAv0C4EonWvyd4Z+PVTyViluAEqPqYeT2WsVz3v6+7e/m0+UmcYc6U8nl0DnjIaTy2c+VOo4H0/DoDSimBosPI5iVJ2Q4zlDcf2vpJ87V0To1Mmu5qGVykauVYU0UghKLct2gOV8QoV9xgyYofzOKr/u+YzX7Ek40UgbodGRQajmkqHmPQpiZ80ZjF9y53AfeM/ziCxmaaxMGmwfhxSXDI1Z3A8fFI59g3d16owXWbJO52GtIKEh2L++y/0EDb2iGdEK+ODmVD0+xwE0wX5t/Nfsk8Khuzi9ko/aTor08Ht8i5lzR6K0NpVPzdYLd2bdCW9pCBj22x0s5i3bxM=
   on:
     branch: main
-    repo: zhengp0/xspline
+    repo: zhengp0/spmat
     tags: true
