@@ -14,6 +14,12 @@ def ilmat():
     return ILMat(lmat)
 
 
+def test_ilmat(ilmat):
+    my_result = ilmat.mat.dot(ilmat.invmat)
+    tr_result = np.identity(ilmat.dsize)
+    assert np.allclose(my_result, tr_result)
+
+
 @pytest.mark.parametrize("array", [np.random.randn(SHAPE[0]),
                                    np.random.randn(*SHAPE)])
 def test_dot(ilmat, array):
