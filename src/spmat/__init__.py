@@ -1,1 +1,1 @@
-from .dlmat import ILMat, DLMat
+from .dlmat import ILMat, DLMat, BDLMat
