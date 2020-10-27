@@ -2,25 +2,22 @@
 Sum of diagonal and low rank matrices
 """
 from __future__ import annotations
-from typing import Iterable
+from typing import List, Iterable
 import numpy as np
+from scipy.linalg import block_diag
+from . import utils
 
 
 class ILMat:
     def __init__(self,
-                 lmat: np.ndarray,
-                 altmat: ILMat = None):
+                 lmat: np.ndarray):
         self.lmat = lmat
-        self.altmat = ILMat(self.lmat.T, altmat=self) if altmat is None else altmat
+        self.dsize = self.lmat.shape[0]
+        self.lrank = min(self.lmat.shape)
         self.check_attr()
 
-    @property
-    def dsize(self) -> int:
-        return self.lmat.shape[0]
-
-    @property
-    def lrank(self) -> int:
-        return min(self.lmat.shape)
+        if self.has_altmat():
+            self.altmat = ILMat(self.lmat.T)
 
     @property
     def mat(self) -> np.ndarray:
@@ -28,7 +25,7 @@ class ILMat:
 
     @property
     def invmat(self) -> np.ndarray:
-        if self.is_lrank():
+        if self.has_altmat():
             result = np.identity(self.dsize) - self.lmat.dot(
                 self.altmat.invmat.dot(self.lmat.T)
             )
@@ -40,21 +37,17 @@ class ILMat:
         if self.lmat.ndim != 2:
             raise ValueError("`lmat` must be a matrix.")
 
-    def is_lrank(self) -> bool:
+    def has_altmat(self) -> bool:
         return self.lrank < self.dsize
 
     def dot(self, array: Iterable) -> np.ndarray:
-        if not isinstance(array, np.ndarray):
-            array = np.asarray(array)
-        if array.ndim not in [1, 2]:
-            raise ValueError("`array` must be a vector or matrix.")
+        array = utils.toarray(array, ndim=(1, 2))
         result = array + self.lmat.dot(self.lmat.T.dot(array))
         return result
 
     def invdot(self, array: Iterable) -> np.ndarray:
-        if not isinstance(array, np.ndarray):
-            array = np.asarray(array)
-        if self.is_lrank():
+        array = utils.toarray(array, ndim=(1, 2))
+        if self.has_altmat():
             result = array - self.lmat.dot(
                 self.altmat.invdot(self.lmat.T.dot(array))
             )
@@ -63,7 +56,7 @@ class ILMat:
         return result
 
     def logdet(self) -> float:
-        if self.is_lrank():
+        if self.has_altmat():
             result = self.altmat.logdet()
         else:
             result = np.log(np.linalg.eigvals(self.mat)).sum()
@@ -79,18 +72,12 @@ class DLMat:
                  lmat: np.ndarray):
         self.diag = diag
         self.lmat = lmat
+        self.dsize = self.diag.size
+        self.lrank = min(self.lmat.shape)
         self.check_attr()
 
         scaled_lmat = self.dscale(self.lmat, by="row", inv=True)
         self.coremat = ILMat(scaled_lmat)
-
-    @property
-    def dsize(self) -> int:
-        return self.diag.size
-
-    @property
-    def lrank(self) -> int:
-        return min(self.lmat.shape)
 
     @property
     def mat(self) -> np.ndarray:
@@ -115,7 +102,7 @@ class DLMat:
                by: str = "both",
                inv: bool = False) -> np.ndarray:
         if not isinstance(array, np.ndarray):
-            array = np.asarray(array)
+            array = np.toarray(array)
         if by not in ["row", "col", "both"]:
             raise ValueError("`by` can only be selected from 'row', 'col' and 'both'.")
         d = 1/np.sqrt(self.diag) if inv else np.sqrt(self.diag)
@@ -148,3 +135,51 @@ class DLMat:
 
     def __repr__(self) -> str:
         return f"DLMat(dsize={self.dsize}, lrank={self.lrank})"
+
+
+class BDLMat:
+    def __init__(self,
+                 dlmats: List[DLMat]):
+        self.dlmats = dlmats
+        self.num_blocks = len(self.dlmats)
+        self.dsizes = np.array([dlmat.dsize for dlmat in self.dlmats])
+        self.dsize = self.dsizes.sum()
+
+    @property
+    def mat(self) -> np.ndarray:
+        return block_diag(*[dlmat.mat for dlmat in self.dlmats])
+
+    @property
+    def invmat(self) -> np.ndarray:
+        return block_diag(*[dlmat.invmat for dlmat in self.dlmats])
+
+    def dot(self, array: Iterable) -> np.ndarray:
+        array = utils.toarray(array, ndim=(1, 2))
+        arrays = utils.splitarray(array, self.dsizes)
+        return np.concatenate([
+            dlmat.dot(arrays[i])
+            for i, dlmat in enumerate(self.dlmats)
+        ], axis=0)
+
+    def invdot(self, array: Iterable) -> np.ndarray:
+        array = utils.toarray(array, ndim=(1, 2))
+        arrays = utils.splitarray(array, self.dsizes)
+        return np.concatenate([
+            dlmat.invdot(arrays[i])
+            for i, dlmat in enumerate(self.dlmats)
+        ], axis=0)
+
+    def logdet(self) -> float:
+        return sum([dlmat.logdet() for dlmat in self.dlmats])
+
+    def __repr__(self) -> str:
+        return f"BDLMat(dsize={self.dsize}, num_blocks={self.num_blocks})"
+
+    @classmethod
+    def create_bdlmat(cls,
+                      diag: np.ndarray,
+                      lmat: np.ndarray,
+                      dsizes: Iterable[int]) -> BDLMat:
+        diags = utils.splitarray(diag, dsizes)
+        lmats = utils.splitarray(lmat, dsizes)
+        return cls([DLMat(*args) for args in zip(diags, lmats)])

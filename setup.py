@@ -14,12 +14,13 @@ if __name__ == '__main__':
         long_description = f.read()
 
     install_requirements = [
-        'numpy'
+        'numpy',
+        'scipy',
     ]
 
     test_requirements = [
         'pytest',
-        'pytest-mock'
+        'pytest-mock',
     ]
 
     doc_requirements = []
