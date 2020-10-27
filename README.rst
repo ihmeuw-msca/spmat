@@ -10,6 +10,6 @@ Special Matrices
 A collection of tools for special matrices.
 Currently include:
 
-- `ILMat`: Identity plus PSD low rank matrix.
-- `DLMat`: Diagonal plus PDS low rank matrix.
-- `BDLMat`: Block `DLMat`.
+- ``ILMat``: Identity plus PSD low rank matrix.
+- ``DLMat``: Diagonal plus PDS low rank matrix.
+- ``BDLMat``: Block ``DLMat``.
