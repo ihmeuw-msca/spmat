@@ -174,3 +174,12 @@ class BDLMat:
 
     def __repr__(self) -> str:
         return f"BDLMat(dsize={self.dsize}, num_blocks={self.num_blocks})"
+
+    @classmethod
+    def create_bdlmat(cls,
+                      diag: np.ndarray,
+                      lmat: np.ndarray,
+                      dsizes: Iterable[int]) -> BDLMat:
+        diags = utils.splitarray(diag, dsizes)
+        lmats = utils.splitarray(lmat, dsizes)
+        return cls([DLMat(*args) for args in zip(diags, lmats)])

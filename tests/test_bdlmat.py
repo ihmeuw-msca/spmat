@@ -11,11 +11,10 @@ NUM_BLOCKS = 3
 
 @pytest.fixture
 def bdlmat():
-    diags = [np.random.rand(SHAPE[0]) + 0.1
-             for i in range(NUM_BLOCKS)]
-    lmats = [np.random.randn(*SHAPE)
-             for i in range(NUM_BLOCKS)]
-    return BDLMat([DLMat(*args) for args in zip(diags, lmats)])
+    diag = np.random.rand(SHAPE[0]*NUM_BLOCKS) + 0.1
+    lmat = np.random.randn(SHAPE[0]*NUM_BLOCKS, SHAPE[1])
+    dsizes = [SHAPE[0]]*NUM_BLOCKS
+    return BDLMat.create_bdlmat(diag, lmat, dsizes)
 
 
 def test_bdlmat(bdlmat):
