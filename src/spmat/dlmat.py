@@ -8,10 +8,10 @@ import numpy as np
 
 class ILMat:
     def __init__(self,
-                 lmat: np.ndarray,
-                 altmat: ILMat = None):
+                 lmat: np.ndarray):
         self.lmat = lmat
-        self.altmat = ILMat(self.lmat.T, altmat=self) if altmat is None else altmat
+        if self.has_altmat():
+            self.altmat = ILMat(self.lmat.T)
         self.check_attr()
 
     @property
@@ -28,7 +28,7 @@ class ILMat:
 
     @property
     def invmat(self) -> np.ndarray:
-        if self.is_lrank():
+        if self.has_altmat():
             result = np.identity(self.dsize) - self.lmat.dot(
                 self.altmat.invmat.dot(self.lmat.T)
             )
@@ -40,7 +40,7 @@ class ILMat:
         if self.lmat.ndim != 2:
             raise ValueError("`lmat` must be a matrix.")
 
-    def is_lrank(self) -> bool:
+    def has_altmat(self) -> bool:
         return self.lrank < self.dsize
 
     def dot(self, array: Iterable) -> np.ndarray:
@@ -54,7 +54,7 @@ class ILMat:
     def invdot(self, array: Iterable) -> np.ndarray:
         if not isinstance(array, np.ndarray):
             array = np.asarray(array)
-        if self.is_lrank():
+        if self.has_altmat():
             result = array - self.lmat.dot(
                 self.altmat.invdot(self.lmat.T.dot(array))
             )
@@ -63,7 +63,7 @@ class ILMat:
         return result
 
     def logdet(self) -> float:
-        if self.is_lrank():
+        if self.has_altmat():
             result = self.altmat.logdet()
         else:
             result = np.log(np.linalg.eigvals(self.mat)).sum()
