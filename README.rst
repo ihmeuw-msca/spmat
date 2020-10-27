@@ -8,7 +8,8 @@ Special Matrices
     :target: https://badge.fury.io/py/spmat
 
 A collection of tools for special matrices.
-Currently include
-* `ILMat`: Identity plus PSD low rank matrix.
-* `DLMat`: Diagonal plus PDS low rank matrix.
-* `BDLMat`: Block `DLMat`.
+Currently include:
+
+- `ILMat`: Identity plus PSD low rank matrix.
+- `DLMat`: Diagonal plus PDS low rank matrix.
+- `BDLMat`: Block `DLMat`.
