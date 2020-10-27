@@ -13,3 +13,18 @@ Currently include:
 - ``ILMat``: Identity plus PSD low rank matrix.
 - ``DLMat``: Diagonal plus PDS low rank matrix.
 - ``BDLMat``: Block ``DLMat``.
+
+Install
+-------
+
+To install, you could download this repository and,
+
+.. code-block:: bash
+
+    python setup.py install
+
+Or simply install through ``pip``,
+
+.. code-block:: bash
+
+    pip install spmat
