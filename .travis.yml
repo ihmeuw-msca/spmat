@@ -5,12 +5,12 @@ install:
 - pip install .
 script:
 - pytest tests
-deploy:
-  provider: pypi
-  username: __token__
-  password:
-    secure: NqWUSBjo34rM+kfHjtePH8ULLTBxEWSDWtF6Ue2cOsoXeWWlBaRgtpzgog6Iw8fYVRJMFQGjCA3VLVfvzx+c8Mupw5TGuGrpeccTePUJWkTUTcO5kvnNDCSJ0frRqt+OZNudb+0JdvTjDC5+AfnojJz6aN6gukzGYgWSrE/vNFRecdgrnu8LZ3L1pXZNWho5YFpLNePME+p2784ItPxyndkTWhKHi9DIn62ubqJREmHLmG/aM25L41IBGgFni9WTMYUJ+n8JGLH3RFeHv6WVRGC5luacOpCvbpeIgpH7p+JdYi/TbtzwcfPQ4IXaSgQW9dxQlxNUiLcD9ylG6Xu5YZiiuU/CUDQdJu6guBqPGP1KwU07Qhr3rniqQGnwL4hM6MJCPCWFsCq50zI8xVoALZ5Q00Yogr8bpcGKLlMT4gajS7GIGiDfx7IsHW8s4GNwCshlf/x9BEU3waYynBqbUVZTPhlVc9myj9uiDyColeZ7FRxoMLtweagOv0pzllDdn2ug6g3JguJNvsKgcLtS9V8U01A9qlB5DDT24Bbo00CIYpa0WU9aAtakVr3bdevG4w1MSudbvK/W4+MXDkMPBl96ZrLOCLTTL4NuYosQcoMw8wp9APzQnv3aFbc3b57TgMeN0+bJIkHmDSrMcBQK91NbFY0a+TKaokTpb42DLsc=
-  on:
-    branch: main
-    repo: zhengp0/spmat
-    tags: true
+# deploy:
+#   provider: pypi
+#   username: __token__
+#   password:
+#     secure: NqWUSBjo34rM+kfHjtePH8ULLTBxEWSDWtF6Ue2cOsoXeWWlBaRgtpzgog6Iw8fYVRJMFQGjCA3VLVfvzx+c8Mupw5TGuGrpeccTePUJWkTUTcO5kvnNDCSJ0frRqt+OZNudb+0JdvTjDC5+AfnojJz6aN6gukzGYgWSrE/vNFRecdgrnu8LZ3L1pXZNWho5YFpLNePME+p2784ItPxyndkTWhKHi9DIn62ubqJREmHLmG/aM25L41IBGgFni9WTMYUJ+n8JGLH3RFeHv6WVRGC5luacOpCvbpeIgpH7p+JdYi/TbtzwcfPQ4IXaSgQW9dxQlxNUiLcD9ylG6Xu5YZiiuU/CUDQdJu6guBqPGP1KwU07Qhr3rniqQGnwL4hM6MJCPCWFsCq50zI8xVoALZ5Q00Yogr8bpcGKLlMT4gajS7GIGiDfx7IsHW8s4GNwCshlf/x9BEU3waYynBqbUVZTPhlVc9myj9uiDyColeZ7FRxoMLtweagOv0pzllDdn2ug6g3JguJNvsKgcLtS9V8U01A9qlB5DDT24Bbo00CIYpa0WU9aAtakVr3bdevG4w1MSudbvK/W4+MXDkMPBl96ZrLOCLTTL4NuYosQcoMw8wp9APzQnv3aFbc3b57TgMeN0+bJIkHmDSrMcBQK91NbFY0a+TKaokTpb42DLsc=
+#   on:
+#     branch: main
+#     repo: zhengp0/spmat
+#     tags: true
