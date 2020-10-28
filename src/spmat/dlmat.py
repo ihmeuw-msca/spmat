@@ -4,7 +4,6 @@ Sum of diagonal and low rank matrices
 from __future__ import annotations
 from typing import List, Iterable
 import numpy as np
-from scipy.linalg import block_diag
 from . import utils
 
 
@@ -41,12 +40,12 @@ class ILMat:
         return self.lrank < self.dsize
 
     def dot(self, array: Iterable) -> np.ndarray:
-        array = utils.toarray(array, ndim=(1, 2))
+        array = utils.to_numpy(array, ndim=(1, 2))
         result = array + self.lmat.dot(self.lmat.T.dot(array))
         return result
 
     def invdot(self, array: Iterable) -> np.ndarray:
-        array = utils.toarray(array, ndim=(1, 2))
+        array = utils.to_numpy(array, ndim=(1, 2))
         if self.has_altmat():
             result = array - self.lmat.dot(
                 self.altmat.invdot(self.lmat.T.dot(array))
@@ -102,7 +101,7 @@ class DLMat:
                by: str = "both",
                inv: bool = False) -> np.ndarray:
         if not isinstance(array, np.ndarray):
-            array = np.toarray(array)
+            array = np.to_numpy(array)
         if by not in ["row", "col", "both"]:
             raise ValueError("`by` can only be selected from 'row', 'col' and 'both'.")
         d = 1/np.sqrt(self.diag) if inv else np.sqrt(self.diag)
@@ -147,23 +146,23 @@ class BDLMat:
 
     @property
     def mat(self) -> np.ndarray:
-        return block_diag(*[dlmat.mat for dlmat in self.dlmats])
+        return utils.create_bdiag_mat([dlmat.mat for dlmat in self.dlmats])
 
     @property
     def invmat(self) -> np.ndarray:
-        return block_diag(*[dlmat.invmat for dlmat in self.dlmats])
+        return utils.create_bdiag_mat([dlmat.invmat for dlmat in self.dlmats])
 
     def dot(self, array: Iterable) -> np.ndarray:
-        array = utils.toarray(array, ndim=(1, 2))
-        arrays = utils.splitarray(array, self.dsizes)
+        array = utils.to_numpy(array, ndim=(1, 2))
+        arrays = utils.split(array, self.dsizes)
         return np.concatenate([
             dlmat.dot(arrays[i])
             for i, dlmat in enumerate(self.dlmats)
         ], axis=0)
 
     def invdot(self, array: Iterable) -> np.ndarray:
-        array = utils.toarray(array, ndim=(1, 2))
-        arrays = utils.splitarray(array, self.dsizes)
+        array = utils.to_numpy(array, ndim=(1, 2))
+        arrays = utils.split(array, self.dsizes)
         return np.concatenate([
             dlmat.invdot(arrays[i])
             for i, dlmat in enumerate(self.dlmats)
@@ -180,6 +179,6 @@ class BDLMat:
                       diag: np.ndarray,
                       lmat: np.ndarray,
                       dsizes: Iterable[int]) -> BDLMat:
-        diags = utils.splitarray(diag, dsizes)
-        lmats = utils.splitarray(lmat, dsizes)
+        diags = utils.split(diag, dsizes)
+        lmats = utils.split(lmat, dsizes)
         return cls([DLMat(*args) for args in zip(diags, lmats)])
