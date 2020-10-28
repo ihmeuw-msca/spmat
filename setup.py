@@ -15,7 +15,6 @@ if __name__ == '__main__':
 
     install_requirements = [
         'numpy',
-        'scipy',
     ]
 
     test_requirements = [
