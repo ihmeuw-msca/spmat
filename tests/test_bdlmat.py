@@ -3,7 +3,11 @@ Test BDLMat
 """
 import pytest
 import numpy as np
-from spmat import DLMat, BDLMat
+from spmat import BDLMat
+
+
+# pylint: disable=redefined-outer-name
+
 
 SHAPE = (5, 3)
 NUM_BLOCKS = 3
