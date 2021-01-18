@@ -18,6 +18,10 @@ class ILMat:
     tmat : ILMat
         Alternative ILMat, construct by transpose of ``lmat``. It is not
         ``None`` when ``lmat`` is a 'fat' matrix.
+    dsize : int
+        Size of the diagonal.
+    lrank : int
+        Rank of the low rank matrix.
 
     Methods
     -------
@@ -41,15 +45,9 @@ class ILMat:
             When ``lmat`` is not a matrix.
         """
         self.lmat = utils.to_numpy(lmat, ndim=(2,))
+        self.dsize = self.lmat.shape[0]
+        self.lrank = min(self.lmat.shape)
         self.tmat = ILMat(self.lmat.T) if self.lrank < self.dsize else None
-
-    @property
-    def dsize(self) -> int:
-        return self.lmat.shape[0]
-
-    @property
-    def lrank(self) -> int:
-        return min(self.lmat.shape)
 
     @property
     def mat(self) -> ndarray:
@@ -129,6 +127,10 @@ class DLMat:
         Diagonal vector.
     lmat : ndarray
         Low rank matrix.
+    dsize : int
+        Size of the diagonal.
+    lrank : int
+        Rank of the low rank matrix.
     sdiag : ndarray
         Square root of diagonal vector.
     ilmat : ILMat
@@ -145,6 +147,21 @@ class DLMat:
     """
 
     def __init__(self, diag: Iterable, lmat: Iterable):
+        """
+        Parameters
+        ----------
+        diag : Iterable
+            Diagonal vector.
+        lmat : Iterable
+            Low rank matrix.
+
+        Raises
+        ------
+        ValueError
+            If length of ``diag`` not match with number of rows of ``lmat``.
+        ValueError
+            If there are non-positive numbers in ``diag``.
+        """
         diag = utils.to_numpy(diag, ndim=(1,))
         lmat = utils.to_numpy(lmat, ndim=(2,))
         if diag.size != lmat.shape[0]:
@@ -155,16 +172,11 @@ class DLMat:
         self.diag = diag
         self.lmat = lmat
 
+        self.dsize = self.diag.size
+        self.lrank = min(self.lmat.shape)
+
         self.sdiag = np.sqrt(self.diag)
         self.ilmat = ILMat(self.lmat/self.sdiag[:, np.newaxis])
-
-    @property
-    def dsize(self) -> int:
-        return self.diag.size
-
-    @property
-    def lrank(self) -> int:
-        return min(self.lmat.shape)
 
     @property
     def mat(self) -> ndarray:
@@ -228,8 +240,31 @@ class DLMat:
 
 
 class BDLMat:
-    def __init__(self,
-                 dlmats: List[DLMat]):
+    """
+    Block diagonal low rank matrix, [... D + L @ L.T ...]
+
+    Attributes
+    ----------
+    dlmats : List[DLMat]
+        List of DLMat.
+    num_blocks : int
+        Number of blocks.
+    dsizes : ndarray
+        An array contains ``dsize`` for each block.
+    dsize : int
+        Overall diagonal size of the matrix.
+
+    Methods
+    -------
+    dot(x)
+        Dot product with vector or matrix.
+    invdot(x)
+        Inverse dot product with vector or matrix.
+    logdet()
+        Log determinant of the matrix.
+    """
+
+    def __init__(self, dlmats: List[DLMat]):
         self.dlmats = dlmats
         self.num_blocks = len(self.dlmats)
         self.dsizes = np.array([dlmat.dsize for dlmat in self.dlmats])
@@ -243,23 +278,51 @@ class BDLMat:
     def invmat(self) -> ndarray:
         return utils.create_bdiag_mat([dlmat.invmat for dlmat in self.dlmats])
 
-    def dot(self, array: Iterable) -> ndarray:
-        array = utils.to_numpy(array, ndim=(1, 2))
-        arrays = utils.split(array, self.dsizes)
-        return np.concatenate([
-            dlmat.dot(arrays[i])
-            for i, dlmat in enumerate(self.dlmats)
-        ], axis=0)
+    def dot(self, x: Iterable) -> ndarray:
+        """
+        Inverse dot product with vector or matrix
 
-    def invdot(self, array: Iterable) -> ndarray:
-        array = utils.to_numpy(array, ndim=(1, 2))
-        arrays = utils.split(array, self.dsizes)
-        return np.concatenate([
-            dlmat.invdot(arrays[i])
-            for i, dlmat in enumerate(self.dlmats)
-        ], axis=0)
+        Parameters
+        ----------
+        x : Iterable
+            Vector or matrix
+
+        Returns
+        -------
+        ndarray
+        """
+        x = utils.to_numpy(x, ndim=(1, 2))
+        x = utils.split(x, self.dsizes)
+        return np.concatenate([dlmat.dot(x[i])
+                               for i, dlmat in enumerate(self.dlmats)], axis=0)
+
+    def invdot(self, x: Iterable) -> ndarray:
+        """
+        Inverse dot product with vector or matrix
+
+        Parameters
+        ----------
+        x : Iterable
+            Vector or matrix
+
+        Returns
+        -------
+        ndarray
+        """
+        x = utils.to_numpy(x, ndim=(1, 2))
+        x = utils.split(x, self.dsizes)
+        return np.concatenate([dlmat.invdot(x[i])
+                               for i, dlmat in enumerate(self.dlmats)], axis=0)
 
     def logdet(self) -> float:
+        """
+        Log determinant
+
+        Returns
+        -------
+        float
+            Log determinant of the matrix.
+        """
         return sum([dlmat.logdet() for dlmat in self.dlmats])
 
     def __repr__(self) -> str:
