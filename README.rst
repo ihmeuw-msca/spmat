@@ -1,11 +1,11 @@
-Special Matrices
-================
-
-.. image:: https://travis-ci.com/zhengp0/spmat.svg?branch=main
-    :target: https://travis-ci.com/zhengp0/spmat
+.. image:: https://github.com/zhengp0/spmat/workflows/python-build/badge.svg
+    :target: https://github.com/zhengp0/spmat/actions
 
 .. image:: https://badge.fury.io/py/spmat.svg
     :target: https://badge.fury.io/py/spmat
+
+Special Matrices
+================
 
 A collection of tools for special matrices.
 Currently include:
