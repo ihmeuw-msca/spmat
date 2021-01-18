@@ -1,62 +1,121 @@
 """
 Sum of diagonal and low rank matrices
 """
-from __future__ import annotations
 from typing import List, Iterable
 import numpy as np
-from . import utils
+from numpy import ndarray
+from spmat import utils
 
 
 class ILMat:
-    def __init__(self,
-                 lmat: np.ndarray):
-        self.lmat = lmat
-        self.dsize = self.lmat.shape[0]
-        self.lrank = min(self.lmat.shape)
-        self.check_attr()
+    """
+    Identity plus outer product of low rank matrix, I + L @ L.T
 
-        if self.has_altmat():
-            self.altmat = ILMat(self.lmat.T)
+    Attributes
+    ----------
+    lmat : ndarray
+        Low rank matrix.
+    tmat : ILMat
+        Alternative ILMat, construct by transpose of ``lmat``. It is not
+        ``None`` when ``lmat`` is a 'fat' matrix.
+
+    Methods
+    -------
+    dot(x)
+        Dot product with vector or matrix.
+    invdot(x)
+        Inverse dot product with vector or matrix.
+    logdet()
+        Log determinant of the matrix.
+    """
+
+    def __init__(self, lmat: Iterable):
+        """
+        Parameters
+        ----------
+        lmat : Iterable
+
+        Raises
+        ------
+        ValueError
+            When ``lmat`` is not a matrix.
+        """
+        lmat = np.asarray(lmat)
+        if lmat.ndim != 2:
+            raise ValueError("`lmat` must be a matrix.")
+
+        self.lmat = lmat
+        self.tmat = ILMat(self.lmat.T) if self.lrank < self.dsize else None
 
     @property
-    def mat(self) -> np.ndarray:
+    def dsize(self) -> int:
+        return self.lmat.shape[0]
+
+    @property
+    def lrank(self) -> int:
+        return min(self.lmat.shape)
+
+    @property
+    def mat(self) -> ndarray:
         return np.identity(self.dsize) + self.lmat.dot(self.lmat.T)
 
     @property
-    def invmat(self) -> np.ndarray:
-        if self.has_altmat():
-            result = np.identity(self.dsize) - self.lmat.dot(
-                self.altmat.invmat.dot(self.lmat.T)
-            )
+    def invmat(self) -> ndarray:
+        if self.tmat is not None:
+            result = np.identity(self.dsize) - \
+                self.lmat @ self.tmat.invmat @ self.lmat.T
         else:
             result = np.linalg.inv(self.mat)
         return result
 
-    def check_attr(self):
-        if self.lmat.ndim != 2:
-            raise ValueError("`lmat` must be a matrix.")
+    def dot(self, x: Iterable) -> ndarray:
+        """
+        Dot product with vector or matrix
 
-    def has_altmat(self) -> bool:
-        return self.lrank < self.dsize
+        Parameters
+        ----------
+        x : Iterable
+            Vector or matrix
 
-    def dot(self, array: Iterable) -> np.ndarray:
-        array = utils.to_numpy(array, ndim=(1, 2))
-        result = array + self.lmat.dot(self.lmat.T.dot(array))
+        Returns
+        -------
+        ndarray
+        """
+        x = utils.to_numpy(x, ndim=(1, 2))
+        result = x + self.lmat @ (self.lmat.T @ x)
         return result
 
-    def invdot(self, array: Iterable) -> np.ndarray:
-        array = utils.to_numpy(array, ndim=(1, 2))
-        if self.has_altmat():
-            result = array - self.lmat.dot(
-                self.altmat.invdot(self.lmat.T.dot(array))
-            )
+    def invdot(self, x: Iterable) -> ndarray:
+        """
+        Inverse dot product with vector or matrix
+
+        Parameters
+        ----------
+        x : Iterable
+            Vector or matrix
+
+        Returns
+        -------
+        ndarray
+        """
+        x = utils.to_numpy(x, ndim=(1, 2))
+        if self.tmat is not None:
+            result = x - self.lmat @ self.tmat.invdot(self.lmat.T @ x)
         else:
-            result = np.linalg.solve(self.mat, array)
+            result = np.linalg.solve(self.mat, x)
         return result
 
     def logdet(self) -> float:
-        if self.has_altmat():
-            result = self.altmat.logdet()
+        """
+        Log determinant
+
+        Returns
+        -------
+        float
+            Log determinant of the matrix.
+        """
+        if self.tmat is not None:
+            result = self.tmat.logdet()
         else:
             result = np.log(np.linalg.eigvals(self.mat)).sum()
         return result
@@ -67,8 +126,8 @@ class ILMat:
 
 class DLMat:
     def __init__(self,
-                 diag: np.ndarray,
-                 lmat: np.ndarray):
+                 diag: ndarray,
+                 lmat: ndarray):
         self.diag = diag
         self.lmat = lmat
         self.dsize = self.diag.size
@@ -79,11 +138,11 @@ class DLMat:
         self.coremat = ILMat(scaled_lmat)
 
     @property
-    def mat(self) -> np.ndarray:
+    def mat(self) -> ndarray:
         return np.diag(self.diag) + self.lmat.dot(self.lmat.T)
 
     @property
-    def invmat(self) -> np.ndarray:
+    def invmat(self) -> ndarray:
         return self.dscale(self.coremat.invmat, inv=True)
 
     def check_attr(self):
@@ -99,8 +158,8 @@ class DLMat:
     def dscale(self,
                array: Iterable,
                by: str = "both",
-               inv: bool = False) -> np.ndarray:
-        if not isinstance(array, np.ndarray):
+               inv: bool = False) -> ndarray:
+        if not isinstance(array, ndarray):
             array = np.to_numpy(array)
         if by not in ["row", "col", "both"]:
             raise ValueError("`by` can only be selected from 'row', 'col' and 'both'.")
@@ -119,12 +178,12 @@ class DLMat:
             raise ValueError("`array` must be a vector or matrx.")
         return result
 
-    def dot(self, array: Iterable) -> np.ndarray:
+    def dot(self, array: Iterable) -> ndarray:
         return self.dscale(self.coremat.dot(
             self.dscale(array, by="row")
         ), by="row")
 
-    def invdot(self, array: Iterable) -> np.ndarray:
+    def invdot(self, array: Iterable) -> ndarray:
         return self.dscale(self.coremat.invdot(
             self.dscale(array, by="row", inv=True)
         ), by="row", inv=True)
@@ -145,14 +204,14 @@ class BDLMat:
         self.dsize = self.dsizes.sum()
 
     @property
-    def mat(self) -> np.ndarray:
+    def mat(self) -> ndarray:
         return utils.create_bdiag_mat([dlmat.mat for dlmat in self.dlmats])
 
     @property
-    def invmat(self) -> np.ndarray:
+    def invmat(self) -> ndarray:
         return utils.create_bdiag_mat([dlmat.invmat for dlmat in self.dlmats])
 
-    def dot(self, array: Iterable) -> np.ndarray:
+    def dot(self, array: Iterable) -> ndarray:
         array = utils.to_numpy(array, ndim=(1, 2))
         arrays = utils.split(array, self.dsizes)
         return np.concatenate([
@@ -160,7 +219,7 @@ class BDLMat:
             for i, dlmat in enumerate(self.dlmats)
         ], axis=0)
 
-    def invdot(self, array: Iterable) -> np.ndarray:
+    def invdot(self, array: Iterable) -> ndarray:
         array = utils.to_numpy(array, ndim=(1, 2))
         arrays = utils.split(array, self.dsizes)
         return np.concatenate([
@@ -176,9 +235,9 @@ class BDLMat:
 
     @classmethod
     def create_bdlmat(cls,
-                      diag: np.ndarray,
-                      lmat: np.ndarray,
-                      dsizes: Iterable[int]) -> BDLMat:
+                      diag: ndarray,
+                      lmat: ndarray,
+                      dsizes: Iterable[int]) -> "BDLMat":
         diags = utils.split(diag, dsizes)
         lmats = utils.split(lmat, dsizes)
         return cls([DLMat(*args) for args in zip(diags, lmats)])
