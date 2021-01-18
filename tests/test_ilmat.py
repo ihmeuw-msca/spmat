@@ -5,6 +5,10 @@ import pytest
 import numpy as np
 from spmat import ILMat
 
+
+# pylint: disable=redefined-outer-name
+
+
 SHAPE = (5, 3)
 
 
