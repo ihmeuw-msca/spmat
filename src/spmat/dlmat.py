@@ -47,19 +47,18 @@ class ILMat:
         self.lmat = utils.to_numpy(lmat, ndim=(2,))
         self.dsize = self.lmat.shape[0]
         self.lrank = min(self.lmat.shape)
-        self.tmat = ILMat(self.lmat.T) if self.lrank < self.dsize else None
+
+        self._u, s, _ = np.linalg.svd(self.lmat, full_matrices=False)
+        self._v = s**2
+        self._w = -self._v/(1 + self._v)
 
     @property
     def mat(self) -> ndarray:
-        return np.identity(self.dsize) + self.lmat.dot(self.lmat.T)
+        return np.identity(self.dsize) + (self._u*self._v) @ self._u.T
 
     @property
     def invmat(self) -> ndarray:
-        if self.tmat is not None:
-            result = np.identity(self.dsize) - self.lmat @ self.tmat.invmat @ self.lmat.T
-        else:
-            result = np.linalg.inv(self.mat)
-        return result
+        return np.identity(self.dsize) + (self._u*self._w) @ self._u.T
 
     def dot(self, x: Iterable) -> ndarray:
         """
@@ -75,8 +74,7 @@ class ILMat:
         ndarray
         """
         x = utils.to_numpy(x, ndim=(1, 2))
-        result = x + self.lmat @ (self.lmat.T @ x)
-        return result
+        return x + (self._u*self._v) @ (self._u.T @ x)
 
     def invdot(self, x: Iterable) -> ndarray:
         """
@@ -92,11 +90,7 @@ class ILMat:
         ndarray
         """
         x = utils.to_numpy(x, ndim=(1, 2))
-        if self.tmat is not None:
-            result = x - self.lmat @ self.tmat.invdot(self.lmat.T @ x)
-        else:
-            result = np.linalg.solve(self.mat, x)
-        return result
+        return x + (self._u*self._w) @ (self._u.T @ x)
 
     def logdet(self) -> float:
         """
@@ -107,11 +101,7 @@ class ILMat:
         float
             Log determinant of the matrix.
         """
-        if self.tmat is not None:
-            result = self.tmat.logdet()
-        else:
-            result = np.log(np.linalg.eigvals(self.mat)).sum()
-        return result
+        return np.log(1 + self._v).sum()
 
     def __repr__(self) -> str:
         return f"ILMat(dsize={self.dsize}, lrank={self.lrank})"
