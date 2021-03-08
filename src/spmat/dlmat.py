@@ -4,7 +4,8 @@ Sum of diagonal and low rank matrices
 from typing import List, Iterable
 import numpy as np
 from numpy import ndarray
-from spmat import utils
+from scipy.linalg import block_diag
+from spmat import utils, linalg
 
 
 class ILMat:
@@ -105,6 +106,60 @@ class ILMat:
 
     def __repr__(self) -> str:
         return f"ILMat(dsize={self.dsize}, lrank={self.lrank})"
+
+
+class BILMat:
+    """
+    Block ILMat.
+    """
+
+    def __init__(self, lmats: Iterable, dsizes: Iterable):
+        self.lmats = np.ascontiguousarray(lmats)
+        self.dsizes = np.asarray(dsizes).astype(int)
+        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+
+        if self.dsizes.sum() != self.lmats.shape[0]:
+            raise ValueError("Sizes of blocks do not match shape of matrix.")
+
+        self._u, s = linalg.block_lsvd(self.lmats.copy(),
+                                       self.dsizes,
+                                       self.lranks)
+        self._v = s**2
+        self._w = -self._v/(1 + self._v)
+
+    @property
+    def lmat_blocks(self) -> List[ndarray]:
+        return np.split(self.lmats, np.cumsum(self.dsizes)[:-1], axis=0)
+
+    @property
+    def mat(self) -> ndarray:
+        return block_diag(*[
+            np.identity(self.dsizes[i]) + lmat.dot(lmat.T)
+            for i, lmat in enumerate(self.lmat_blocks)
+        ])
+
+    @property
+    def invmat(self) -> ndarray:
+        return block_diag(*[
+            np.linalg.inv(np.identity(self.dsizes[i]) + lmat.dot(lmat.T))
+            for i, lmat in enumerate(self.lmat_blocks)
+        ])
+
+    def dot(self, x: Iterable) -> ndarray:
+        x = np.ascontiguousarray(x)
+        dotfun = linalg.block_mvdot if x.ndim == 1 else linalg.block_mmdot
+        return dotfun(self._u, self._v, x, self.dsizes, self.lranks)
+
+    def invdot(self, x: Iterable) -> ndarray:
+        x = np.ascontiguousarray(x)
+        dotfun = linalg.block_mvdot if x.ndim == 1 else linalg.block_mmdot
+        return dotfun(self._u, self._w, x, self.dsizes, self.lranks)
+
+    def logdet(self) -> float:
+        return np.log(1 + self._v).sum()
+
+    def __repr__(self) -> str:
+        return f"BILMat(dsizes={self.dsizes}, lranks={self.lranks})"
 
 
 class DLMat:
