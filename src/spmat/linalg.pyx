@@ -67,7 +67,6 @@ def block_mvdot(double[::1] u_view,
     cdef int ind_y = 0
     cdef int ind_t = 0
     cdef int ind_u = 0
-    cdef int ind_v = 0
 
     # compute t = u.T @ x
     for i in range(n_view.size):
@@ -106,7 +105,7 @@ def block_mvdot(double[::1] u_view,
         ind_u += dim_row*dim_col
 
     # compute y = y + x
-    for j in range(y_view.size):
+    for i in range(y_view.size):
         y_view[i] += x_view[i]
 
     return y
@@ -134,7 +133,6 @@ def block_mmdot(double[::1] u_view,
     cdef int ind_y = 0
     cdef int ind_t = 0
     cdef int ind_u = 0
-    cdef int ind_v = 0
 
     # compute t = u.T @ x
     for i in range(n_view.size):
