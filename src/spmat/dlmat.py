@@ -117,6 +117,7 @@ class BILMat:
         self.lmats = np.ascontiguousarray(lmats)
         self.dsizes = np.asarray(dsizes).astype(int)
         self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+        self.dsize = self.dsizes.sum()
 
         if self.dsizes.sum() != self.lmats.shape[0]:
             raise ValueError("Sizes of blocks do not match shape of matrix.")
@@ -159,7 +160,7 @@ class BILMat:
         return np.log(1 + self._v).sum()
 
     def __repr__(self) -> str:
-        return f"BILMat(dsizes={self.dsizes}, lranks={self.lranks})"
+        return f"BILMat(dsize={self.dsize}, num_blocks={self.dsizes.size})"
 
 
 class DLMat:
@@ -282,6 +283,46 @@ class DLMat:
 
     def __repr__(self) -> str:
         return f"DLMat(dsize={self.dsize}, lrank={self.lrank})"
+
+
+class CythonBDLMat:
+    def __init__(self, diags: Iterable, lmats: Iterable, dsizes: Iterable):
+        self.diags = np.ascontiguousarray(diags)
+        self.lmats = np.ascontiguousarray(lmats)
+        self.dsizes = np.ascontiguousarray(dsizes)
+        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+        self.sdiags = np.sqrt(self.diags)
+
+        self.bilmat = BILMat(self.lmats/self.sdiags[:, np.newaxis], self.dsizes)
+        self.dsize = self.dsizes.sum()
+
+    @property
+    def mat(self) -> ndarray:
+        return self.bilmat.mat * (self.sdiags[:, np.newaxis] * self.sdiags)
+
+    @property
+    def invmat(self) -> ndarray:
+        return self.bilmat.invmat / (self.sdiags[:, np.newaxis] * self.sdiags)
+
+    def dot(self, x: ndarray) -> ndarray:
+        x = np.ascontiguousarray(x)
+        x = (x.T*self.sdiags).T
+        x = self.bilmat.dot(x)
+        x = (x.T*self.sdiags).T
+        return x
+
+    def invdot(self, x: ndarray) -> ndarray:
+        x = np.ascontiguousarray(x)
+        x = (x.T/self.sdiags).T
+        x = self.bilmat.invdot(x)
+        x = (x.T/self.sdiags).T
+        return x
+
+    def logdet(self) -> float:
+        return np.log(self.diags).sum() + self.bilmat.logdet()
+
+    def __repr__(self) -> str:
+        return f"BDLMat(dsize={self.dsize}, num_blocks={self.dsizes.size})"
 
 
 class BDLMat:
