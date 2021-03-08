@@ -2,6 +2,9 @@ import sys
 from pathlib import Path
 from setuptools import setup, find_packages
 
+import numpy
+from Cython.Build import cythonize
+
 
 if __name__ == '__main__':
     base_dir = Path(__file__).parent
@@ -46,4 +49,6 @@ if __name__ == '__main__':
               'test': test_requirements,
               'dev': doc_requirements + test_requirements
           },
+          ext_modules=cythonize(["src/spmat/linalg.pyx"]),
+          include_dirs=[numpy.get_include()],
           zip_safe=False,)

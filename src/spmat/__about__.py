@@ -13,4 +13,4 @@ __author__ = "Peng Zheng"
 __email__ = "zhengp@uw.edu"
 
 __license__ = "BSD 2-Clause License"
-__copyright__ = f"Copyright 2020 {__author__}"
+__copyright__ = f"Copyright 2021 {__author__}"
