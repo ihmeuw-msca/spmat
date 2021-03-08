@@ -5,6 +5,8 @@ cimport scipy.linalg.cython_blas as cblas
 cimport scipy.linalg.cython_lapack as clapack
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
     cdef int dim_row = max(n_view)
     cdef int dim_col = a_view.shape[1]
@@ -43,6 +45,8 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
     return u, s
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def block_mvdot(double[::1] u_view,
                 double[::1] v_view,
                 double[::1] x_view,
@@ -58,6 +62,7 @@ def block_mvdot(double[::1] u_view,
     y = np.empty(np.array(n_view).sum(), dtype=np.float_)
     cdef double[::1] y_view = y
     cdef double[::1] t_view = t
+    cdef i, j
     cdef int ind_x = 0
     cdef int ind_y = 0
     cdef int ind_u = 0
@@ -98,58 +103,70 @@ def block_mvdot(double[::1] u_view,
     return y
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def block_mmdot(double[::1] u_view,
                 double[::1] v_view,
                 double[:, ::1] x_view,
                 long[::1] n_view,
                 long[::1] k_view):
-    cdef int dim_u_row
-    cdef int dim_u_col
-    cdef int dim_x_col = x_view.shape[1]
+    cdef int dim_row
+    cdef int dim_col
+    cdef int num_col = x_view.shape[1]
     cdef double zero_double = 0
     cdef double one_double = 1
 
-    t = np.empty((np.array(k_view).max(), dim_x_col), dtype=np.float_)
-    y = np.empty((np.array(n_view).sum(), dim_x_col), dtype=np.float_)
+    t = np.empty((np.array(k_view).sum(), num_col), dtype=np.float_)
+    y = np.empty((np.array(n_view).sum(), num_col), dtype=np.float_)
     cdef double[:, ::1] y_view = y
     cdef double[:, ::1] t_view = t
+    cdef int i, j
     cdef int ind_x = 0
     cdef int ind_y = 0
+    cdef int ind_t = 0
     cdef int ind_u = 0
     cdef int ind_v = 0
 
+    # compute t = u.T @ x
     for i in range(n_view.size):
-        dim_u_row = n_view[i]
-        dim_u_col = k_view[i]
-
-        # compute t = u.T @ x
+        dim_row = n_view[i]
+        dim_col = k_view[i]
+        
         cblas.dgemm("N", "T",
-                    &dim_x_col, &dim_u_row, &dim_u_row, &one_double,
-                    &x_view[ind_x][0], &dim_x_col,
-                    &u_view[ind_u], &dim_u_col, &zero_double,
-                    &t_view[0][0], &dim_x_col)
+                    &num_col, &dim_col, &dim_row, &one_double,
+                    &x_view[ind_x][0], &num_col,
+                    &u_view[ind_u], &dim_col, &zero_double,
+                    &t_view[ind_t][0], &num_col)
         
-        # compute t = t * v
-        for j in range(dim_u_col):
-            for k in range(dim_x_col):
-                t_view[j][k] *= v_view[ind_v + j]
-        
-        # compute y = u @ t
+        ind_x += dim_row
+        ind_t += dim_col
+        ind_u += dim_row*dim_col
+
+    # compute t = t * v
+    for i in range(t_view.shape[0]):
+        for j in range(t_view.shape[1]):
+            t_view[i, j] *= v_view[i]
+    
+    ind_u = 0
+    ind_t = 0
+    # compute y = u @ t
+    for i in range(n_view.size):
+        dim_row = n_view[i]
+        dim_col = k_view[i]
+
         cblas.dgemm("N", "N",
-                    &dim_x_col, &dim_u_col, &dim_u_col, &one_double,
-                    &t_view[0][0], &dim_x_col,
-                    &u_view[ind_u], &dim_u_col, &zero_double,
-                    &y_view[ind_y][0], &dim_x_col)
+                    &num_col, &dim_row, &dim_col, &one_double,
+                    &t_view[ind_t][0], &num_col,
+                    &u_view[ind_u], &dim_col, &zero_double,
+                    &y_view[ind_y][0], &num_col)
+        
+        ind_y += dim_row
+        ind_t += dim_col
+        ind_u += dim_row*dim_col
 
-        # compute y = y + x
-        for j in range(dim_u_row):
-            for k in range(dim_x_col):
-                y_view[ind_y + j][k] += x_view[ind_x + j][k]
-
-        # update indices
-        ind_x += dim_u_row
-        ind_y += dim_u_row
-        ind_u += dim_u_row*dim_u_col
-        ind_v += dim_u_col
+    # compute y = y + x
+    for i in range(y_view.shape[0]):
+        for j in range(y_view.shape[1]):
+            y_view[i, j] += x_view[i, j]
 
     return y
