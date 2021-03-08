@@ -1,8 +1,8 @@
 import numpy as np
 cimport numpy as cnp
 cimport cython
-cimport scipy.linalg.cython_blas as cblas
-cimport scipy.linalg.cython_lapack as clapack
+cimport scipy.linalg.cython_blas as blas
+cimport scipy.linalg.cython_lapack as lapack
 
 
 @cython.boundscheck(False)
@@ -30,13 +30,13 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
         dim_row = n_view[i]
         dim_min = k_view[i]
 
-        clapack.dgesvd("N", "S",
-                       &dim_col, &dim_row,
-                       &a_view[ind_a][0], &dim_col,
-                       &s_view[ind_s],
-                       &a_view[ind_a][0], &dim_col,
-                       &u_view[ind_u], &dim_min,
-                       &w_view[0], &lwork, &info)
+        lapack.dgesvd("N", "S",
+                      &dim_col, &dim_row,
+                      &a_view[ind_a][0], &dim_col,
+                      &s_view[ind_s],
+                      &a_view[ind_a][0], &dim_col,
+                      &u_view[ind_u], &dim_min,
+                      &w_view[0], &lwork, &info)
 
         ind_a += dim_row
         ind_u += dim_row*dim_min
@@ -69,35 +69,37 @@ def block_mvdot(double[::1] u_view,
     cdef int ind_u = 0
     cdef int ind_v = 0
 
+    # compute t = u.T @ x
     for i in range(n_view.size):
         dim_row = n_view[i]
         dim_col = k_view[i]
 
-        # compute t = u.T @ x
-        cblas.dgemv("N",
-                    &dim_col, &dim_row, &one_double,
-                    &u_view[ind_u], &dim_col,
-                    &x_view[ind_x], &one_int, &zero_double,
-                    &t_view[ind_t], &one_int)
-        
+        blas.dgemv("N",
+                   &dim_col, &dim_row, &one_double,
+                   &u_view[ind_u], &dim_col,
+                   &x_view[ind_x], &one_int, &zero_double,
+                   &t_view[ind_t], &one_int)
+
         ind_x += dim_row
         ind_t += dim_col
         ind_u += dim_row*dim_col
-        
+
     # compute t = t * v
     for i in range(t_view.size):
         t_view[i] *= v_view[i]
-        
-    
+
     # compute y = u @ t
     ind_t = 0
     ind_u = 0
     for i in range(n_view.size):
-        cblas.dgemv("T",
-                    &dim_col, &dim_row, &one_double,
-                    &u_view[ind_u], &dim_col,
-                    &t_view[ind_t], &one_int, &zero_double,
-                    &y_view[ind_y], &one_int)
+        dim_row = n_view[i]
+        dim_col = k_view[i]
+
+        blas.dgemv("T",
+                   &dim_col, &dim_row, &one_double,
+                   &u_view[ind_u], &dim_col,
+                   &t_view[ind_t], &one_int, &zero_double,
+                   &y_view[ind_y], &one_int)
 
         ind_y += dim_row
         ind_t += dim_col
@@ -139,12 +141,12 @@ def block_mmdot(double[::1] u_view,
         dim_row = n_view[i]
         dim_col = k_view[i]
         
-        cblas.dgemm("N", "T",
-                    &num_col, &dim_col, &dim_row, &one_double,
-                    &x_view[ind_x][0], &num_col,
-                    &u_view[ind_u], &dim_col, &zero_double,
-                    &t_view[ind_t][0], &num_col)
-        
+        blas.dgemm("N", "T",
+                   &num_col, &dim_col, &dim_row, &one_double,
+                   &x_view[ind_x][0], &num_col,
+                   &u_view[ind_u], &dim_col, &zero_double,
+                   &t_view[ind_t][0], &num_col)
+
         ind_x += dim_row
         ind_t += dim_col
         ind_u += dim_row*dim_col
@@ -153,7 +155,7 @@ def block_mmdot(double[::1] u_view,
     for i in range(t_view.shape[0]):
         for j in range(t_view.shape[1]):
             t_view[i, j] *= v_view[i]
-    
+
     # compute y = u @ t
     ind_u = 0
     ind_t = 0
@@ -161,12 +163,12 @@ def block_mmdot(double[::1] u_view,
         dim_row = n_view[i]
         dim_col = k_view[i]
 
-        cblas.dgemm("N", "N",
-                    &num_col, &dim_row, &dim_col, &one_double,
-                    &t_view[ind_t][0], &num_col,
-                    &u_view[ind_u], &dim_col, &zero_double,
-                    &y_view[ind_y][0], &num_col)
-        
+        blas.dgemm("N", "N",
+                   &num_col, &dim_row, &dim_col, &one_double,
+                   &t_view[ind_t][0], &num_col,
+                   &u_view[ind_u], &dim_col, &zero_double,
+                   &y_view[ind_y][0], &num_col)
+
         ind_y += dim_row
         ind_t += dim_col
         ind_u += dim_row*dim_col
