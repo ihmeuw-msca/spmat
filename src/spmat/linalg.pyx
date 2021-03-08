@@ -58,13 +58,14 @@ def block_mvdot(double[::1] u_view,
     cdef double zero_double = 0
     cdef double one_double = 1
 
-    t = np.empty(np.array(k_view).max(), dtype=np.float_)
+    t = np.empty(np.array(k_view).sum(), dtype=np.float_)
     y = np.empty(np.array(n_view).sum(), dtype=np.float_)
     cdef double[::1] y_view = y
     cdef double[::1] t_view = t
-    cdef i, j
+    cdef int i
     cdef int ind_x = 0
     cdef int ind_y = 0
+    cdef int ind_t = 0
     cdef int ind_u = 0
     cdef int ind_v = 0
 
@@ -77,28 +78,34 @@ def block_mvdot(double[::1] u_view,
                     &dim_col, &dim_row, &one_double,
                     &u_view[ind_u], &dim_col,
                     &x_view[ind_x], &one_int, &zero_double,
-                    &t_view[0], &one_int)
+                    &t_view[ind_t], &one_int)
         
-        # compute t = t * v
-        for j in range(dim_col):
-            t_view[j] *= v_view[ind_v + j]
+        ind_x += dim_row
+        ind_t += dim_col
+        ind_u += dim_row*dim_col
         
-        # compute y = u @ t
+    # compute t = t * v
+    for i in range(t_view.size):
+        t_view[i] *= v_view[i]
+        
+    
+    # compute y = u @ t
+    ind_t = 0
+    ind_u = 0
+    for i in range(n_view.size):
         cblas.dgemv("T",
                     &dim_col, &dim_row, &one_double,
                     &u_view[ind_u], &dim_col,
-                    &t_view[0], &one_int, &zero_double,
+                    &t_view[ind_t], &one_int, &zero_double,
                     &y_view[ind_y], &one_int)
 
-        # compute y = y + x
-        for j in range(dim_row):
-            y_view[ind_y + j] += x_view[ind_x + j]
-
-        # update indices
-        ind_x += dim_row
         ind_y += dim_row
+        ind_t += dim_col
         ind_u += dim_row*dim_col
-        ind_v += dim_col
+
+    # compute y = y + x
+    for j in range(y_view.size):
+        y_view[i] += x_view[i]
 
     return y
 
@@ -147,9 +154,9 @@ def block_mmdot(double[::1] u_view,
         for j in range(t_view.shape[1]):
             t_view[i, j] *= v_view[i]
     
+    # compute y = u @ t
     ind_u = 0
     ind_t = 0
-    # compute y = u @ t
     for i in range(n_view.size):
         dim_row = n_view[i]
         dim_col = k_view[i]
