@@ -285,7 +285,37 @@ class DLMat:
         return f"DLMat(dsize={self.dsize}, lrank={self.lrank})"
 
 
-class CythonBDLMat:
+class BDLMat:
+    """
+    Block diagonal low rank matrix, [... D + L @ L.T ...]
+
+    Attributes
+    ----------
+    diags : ndarray
+        Diagonal component of the matrix.
+    lmats : ndarray
+        L-Matrix component of the matrix.
+    dsizes : ndarray
+        An array contains ``dsize`` for each block.
+    dsize : int
+        Overall diagonal size of the matrix.
+    lranks : int
+        Ranks of each l-matrix block.
+    sdiags : ndarray
+        Square root of the diagonal.
+    bilmat : BILMat
+        Block ILMat for easier computation
+
+    Methods
+    -------
+    dot(x)
+        Dot product with vector or matrix.
+    invdot(x)
+        Inverse dot product with vector or matrix.
+    logdet()
+        Log determinant of the matrix.
+    """
+
     def __init__(self, diags: Iterable, lmats: Iterable, dsizes: Iterable):
         self.diags = np.ascontiguousarray(diags)
         self.lmats = np.ascontiguousarray(lmats)
@@ -304,7 +334,23 @@ class CythonBDLMat:
     def invmat(self) -> ndarray:
         return self.bilmat.invmat / (self.sdiags[:, np.newaxis] * self.sdiags)
 
+    @property
+    def num_blocks(self) -> int:
+        return self.dsizes.size
+
     def dot(self, x: ndarray) -> ndarray:
+        """
+        Inverse dot product with vector or matrix
+
+        Parameters
+        ----------
+        x : Iterable
+            Vector or matrix
+
+        Returns
+        -------
+        ndarray
+        """
         x = np.ascontiguousarray(x)
         x = (x.T*self.sdiags).T
         x = self.bilmat.dot(x)
@@ -312,93 +358,23 @@ class CythonBDLMat:
         return x
 
     def invdot(self, x: ndarray) -> ndarray:
+        """
+        Inverse dot product with vector or matrix
+
+        Parameters
+        ----------
+        x : Iterable
+            Vector or matrix
+
+        Returns
+        -------
+        ndarray
+        """
         x = np.ascontiguousarray(x)
         x = (x.T/self.sdiags).T
         x = self.bilmat.invdot(x)
         x = (x.T/self.sdiags).T
         return x
-
-    def logdet(self) -> float:
-        return np.log(self.diags).sum() + self.bilmat.logdet()
-
-    def __repr__(self) -> str:
-        return f"BDLMat(dsize={self.dsize}, num_blocks={self.dsizes.size})"
-
-
-class BDLMat:
-    """
-    Block diagonal low rank matrix, [... D + L @ L.T ...]
-
-    Attributes
-    ----------
-    dlmats : List[DLMat]
-        List of DLMat.
-    num_blocks : int
-        Number of blocks.
-    dsizes : ndarray
-        An array contains ``dsize`` for each block.
-    dsize : int
-        Overall diagonal size of the matrix.
-
-    Methods
-    -------
-    dot(x)
-        Dot product with vector or matrix.
-    invdot(x)
-        Inverse dot product with vector or matrix.
-    logdet()
-        Log determinant of the matrix.
-    """
-
-    def __init__(self, dlmats: List[DLMat]):
-        self.dlmats = dlmats
-        self.num_blocks = len(self.dlmats)
-        self.dsizes = np.array([dlmat.dsize for dlmat in self.dlmats])
-        self.dsize = self.dsizes.sum()
-
-    @property
-    def mat(self) -> ndarray:
-        return utils.create_bdiag_mat([dlmat.mat for dlmat in self.dlmats])
-
-    @property
-    def invmat(self) -> ndarray:
-        return utils.create_bdiag_mat([dlmat.invmat for dlmat in self.dlmats])
-
-    def dot(self, x: Iterable) -> ndarray:
-        """
-        Inverse dot product with vector or matrix
-
-        Parameters
-        ----------
-        x : Iterable
-            Vector or matrix
-
-        Returns
-        -------
-        ndarray
-        """
-        x = utils.to_numpy(x, ndim=(1, 2))
-        x = utils.split(x, self.dsizes)
-        return np.concatenate([dlmat.dot(x[i])
-                               for i, dlmat in enumerate(self.dlmats)], axis=0)
-
-    def invdot(self, x: Iterable) -> ndarray:
-        """
-        Inverse dot product with vector or matrix
-
-        Parameters
-        ----------
-        x : Iterable
-            Vector or matrix
-
-        Returns
-        -------
-        ndarray
-        """
-        x = utils.to_numpy(x, ndim=(1, 2))
-        x = utils.split(x, self.dsizes)
-        return np.concatenate([dlmat.invdot(x[i])
-                               for i, dlmat in enumerate(self.dlmats)], axis=0)
 
     def logdet(self) -> float:
         """
@@ -409,16 +385,7 @@ class BDLMat:
         float
             Log determinant of the matrix.
         """
-        return sum([dlmat.logdet() for dlmat in self.dlmats])
+        return np.log(self.diags).sum() + self.bilmat.logdet()
 
     def __repr__(self) -> str:
         return f"BDLMat(dsize={self.dsize}, num_blocks={self.num_blocks})"
-
-    @classmethod
-    def create_bdlmat(cls,
-                      diag: ndarray,
-                      lmat: ndarray,
-                      dsizes: Iterable[int]) -> "BDLMat":
-        diags = utils.split(diag, dsizes)
-        lmats = utils.split(lmat, dsizes)
-        return cls([DLMat(*args) for args in zip(diags, lmats)])
