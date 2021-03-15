@@ -4,7 +4,8 @@ Sum of diagonal and low rank matrices
 from typing import List, Iterable
 import numpy as np
 from numpy import ndarray
-from spmat import utils
+from scipy.linalg import block_diag
+from spmat import utils, linalg
 
 
 class ILMat:
@@ -105,6 +106,61 @@ class ILMat:
 
     def __repr__(self) -> str:
         return f"ILMat(dsize={self.dsize}, lrank={self.lrank})"
+
+
+class BILMat:
+    """
+    Block ILMat.
+    """
+
+    def __init__(self, lmats: Iterable, dsizes: Iterable):
+        self.lmats = np.ascontiguousarray(lmats)
+        self.dsizes = np.asarray(dsizes).astype(int)
+        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+        self.dsize = self.dsizes.sum()
+
+        if self.dsizes.sum() != self.lmats.shape[0]:
+            raise ValueError("Sizes of blocks do not match shape of matrix.")
+
+        self._u, s = linalg.block_lsvd(self.lmats.copy(),
+                                       self.dsizes,
+                                       self.lranks)
+        self._v = s**2
+        self._w = -self._v/(1 + self._v)
+
+    @property
+    def lmat_blocks(self) -> List[ndarray]:
+        return np.split(self.lmats, np.cumsum(self.dsizes)[:-1], axis=0)
+
+    @property
+    def mat(self) -> ndarray:
+        return block_diag(*[
+            np.identity(self.dsizes[i]) + lmat.dot(lmat.T)
+            for i, lmat in enumerate(self.lmat_blocks)
+        ])
+
+    @property
+    def invmat(self) -> ndarray:
+        return block_diag(*[
+            np.linalg.inv(np.identity(self.dsizes[i]) + lmat.dot(lmat.T))
+            for i, lmat in enumerate(self.lmat_blocks)
+        ])
+
+    def dot(self, x: Iterable) -> ndarray:
+        x = np.ascontiguousarray(x)
+        dotfun = linalg.block_mvdot if x.ndim == 1 else linalg.block_mmdot
+        return dotfun(self._u, self._v, x, self.dsizes, self.lranks)
+
+    def invdot(self, x: Iterable) -> ndarray:
+        x = np.ascontiguousarray(x)
+        dotfun = linalg.block_mvdot if x.ndim == 1 else linalg.block_mmdot
+        return dotfun(self._u, self._w, x, self.dsizes, self.lranks)
+
+    def logdet(self) -> float:
+        return np.log(1 + self._v).sum()
+
+    def __repr__(self) -> str:
+        return f"BILMat(dsize={self.dsize}, num_blocks={self.dsizes.size})"
 
 
 class DLMat:
@@ -235,14 +291,20 @@ class BDLMat:
 
     Attributes
     ----------
-    dlmats : List[DLMat]
-        List of DLMat.
-    num_blocks : int
-        Number of blocks.
+    diags : ndarray
+        Diagonal component of the matrix.
+    lmats : ndarray
+        L-Matrix component of the matrix.
     dsizes : ndarray
         An array contains ``dsize`` for each block.
     dsize : int
         Overall diagonal size of the matrix.
+    lranks : int
+        Ranks of each l-matrix block.
+    sdiags : ndarray
+        Square root of the diagonal.
+    bilmat : BILMat
+        Block ILMat for easier computation
 
     Methods
     -------
@@ -254,21 +316,29 @@ class BDLMat:
         Log determinant of the matrix.
     """
 
-    def __init__(self, dlmats: List[DLMat]):
-        self.dlmats = dlmats
-        self.num_blocks = len(self.dlmats)
-        self.dsizes = np.array([dlmat.dsize for dlmat in self.dlmats])
+    def __init__(self, diags: Iterable, lmats: Iterable, dsizes: Iterable):
+        self.diags = np.ascontiguousarray(diags)
+        self.lmats = np.ascontiguousarray(lmats)
+        self.dsizes = np.ascontiguousarray(dsizes)
+        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+        self.sdiags = np.sqrt(self.diags)
+
+        self.bilmat = BILMat(self.lmats/self.sdiags[:, np.newaxis], self.dsizes)
         self.dsize = self.dsizes.sum()
 
     @property
     def mat(self) -> ndarray:
-        return utils.create_bdiag_mat([dlmat.mat for dlmat in self.dlmats])
+        return self.bilmat.mat * (self.sdiags[:, np.newaxis] * self.sdiags)
 
     @property
     def invmat(self) -> ndarray:
-        return utils.create_bdiag_mat([dlmat.invmat for dlmat in self.dlmats])
+        return self.bilmat.invmat / (self.sdiags[:, np.newaxis] * self.sdiags)
 
-    def dot(self, x: Iterable) -> ndarray:
+    @property
+    def num_blocks(self) -> int:
+        return self.dsizes.size
+
+    def dot(self, x: ndarray) -> ndarray:
         """
         Inverse dot product with vector or matrix
 
@@ -281,12 +351,13 @@ class BDLMat:
         -------
         ndarray
         """
-        x = utils.to_numpy(x, ndim=(1, 2))
-        x = utils.split(x, self.dsizes)
-        return np.concatenate([dlmat.dot(x[i])
-                               for i, dlmat in enumerate(self.dlmats)], axis=0)
+        x = np.ascontiguousarray(x)
+        x = (x.T*self.sdiags).T
+        x = self.bilmat.dot(x)
+        x = (x.T*self.sdiags).T
+        return x
 
-    def invdot(self, x: Iterable) -> ndarray:
+    def invdot(self, x: ndarray) -> ndarray:
         """
         Inverse dot product with vector or matrix
 
@@ -299,10 +370,11 @@ class BDLMat:
         -------
         ndarray
         """
-        x = utils.to_numpy(x, ndim=(1, 2))
-        x = utils.split(x, self.dsizes)
-        return np.concatenate([dlmat.invdot(x[i])
-                               for i, dlmat in enumerate(self.dlmats)], axis=0)
+        x = np.ascontiguousarray(x)
+        x = (x.T/self.sdiags).T
+        x = self.bilmat.invdot(x)
+        x = (x.T/self.sdiags).T
+        return x
 
     def logdet(self) -> float:
         """
@@ -313,16 +385,7 @@ class BDLMat:
         float
             Log determinant of the matrix.
         """
-        return sum([dlmat.logdet() for dlmat in self.dlmats])
+        return np.log(self.diags).sum() + self.bilmat.logdet()
 
     def __repr__(self) -> str:
         return f"BDLMat(dsize={self.dsize}, num_blocks={self.num_blocks})"
-
-    @classmethod
-    def create_bdlmat(cls,
-                      diag: ndarray,
-                      lmat: ndarray,
-                      dsizes: Iterable[int]) -> "BDLMat":
-        diags = utils.split(diag, dsizes)
-        lmats = utils.split(lmat, dsizes)
-        return cls([DLMat(*args) for args in zip(diags, lmats)])
