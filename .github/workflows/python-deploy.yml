@@ -1,8 +1,8 @@
 name: python-deploy
 on:
-  push:
+  create:
     tags:
-      - refs/tags/*
+      - refs/tags/v*
 
 jobs:
   build_wheels:
