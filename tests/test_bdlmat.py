@@ -18,7 +18,7 @@ def bdlmat():
     diag = np.random.rand(SHAPE[0]*NUM_BLOCKS) + 0.1
     lmat = np.random.randn(SHAPE[0]*NUM_BLOCKS, SHAPE[1])
     dsizes = [SHAPE[0]]*NUM_BLOCKS
-    return BDLMat.create_bdlmat(diag, lmat, dsizes)
+    return BDLMat(diag, lmat, dsizes)
 
 
 def test_bdlmat(bdlmat):
