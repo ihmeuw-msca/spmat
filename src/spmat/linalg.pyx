@@ -8,15 +8,26 @@ cimport scipy.linalg.cython_lapack as lapack
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
-    cdef int dim_row = max(n_view)
+    # a_view: matrix, should be input data unrolled into 1D vector
+    # n_view: block sizes
+    # k_view: number of columns
+    # need to rewrite block_lsvd to use 1D vectors
+
+    # LSVD = left singular value decomposition
+
+    # Expected input/output?
+    # Based on comment, is this just SVD? Can we use np.linalg.svd instead?
+    # What is "L" in "LSVD"? Assume "SVD" means singular value decomposition
+    # So: numpy.linalg.svd uses Lapack.dgesdd instead of lapack.dgesvd, what's the difference? Comparable results?
+    cdef int dim_row = max(n_view) # dimension of the rows
     cdef int dim_col = a_view.shape[1]
-    cdef int dim_max = max(dim_row, dim_col)
-    cdef int dim_min = min(dim_row, dim_col)
+    cdef int dim_max = max(dim_row, dim_col) # dim_max = sz1
+    cdef int dim_min = min(dim_row, dim_col) # dim_min = ss
     cdef int lwork = 2*max(1, 3*dim_min + dim_max, 5*dim_min)
     cdef int ind_a = 0
     cdef int ind_u = 0
     cdef int ind_s = 0
-    cdef int info
+    cdef int info # Output of the svd. stored in &info
 
     u = np.empty(np.array(n_view).dot(np.array(k_view)), dtype=np.float_)
     s = np.empty(np.array(k_view).sum(), dtype=np.float_)
@@ -25,11 +36,13 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
     cdef double[::1] s_view = s
     cdef double[::1] w_view = w
 
-
+    # What is input for n_view? Seems to be a way to chunk a matrix into block matrices and run SVD on each block?
     for i in range(n_view.size):
         dim_row = n_view[i]
         dim_min = k_view[i]
-
+        # Might be worth checking:
+        # https://netlib.org/lapack/lug/node71.html#:~:text=We%20include%20both%20DGESVD%20and,than%20DGESVD%20on%20most%20machines.
+        # DGESDD supposed to be much faster
         lapack.dgesvd("N", "S",
                       &dim_col, &dim_row,
                       &a_view[ind_a][0], &dim_col,
@@ -52,6 +65,11 @@ def block_mvdot(double[::1] u_view,
                 double[::1] x_view,
                 long[::1] n_view,
                 long[::1] k_view):
+    # Mi = Ui Sigma Vi(T)
+    # U = U
+    # V = V
+    # x = term to be multiplied
+    # k =
     cdef int dim_row
     cdef int dim_col
     cdef int one_int = 1
