@@ -11,11 +11,6 @@ class Block:
         self.data = data
         self.validate()
 
-    def validate(self, rtol: float = 1e-05, atol: float = 1e-08) -> None:
-        """Blocks are always assumed to be square and symmetric."""
-        if not np.allclose(self.data, self.data.T, rtol=rtol, atol=atol):
-            raise ValueError(f"Provided data of {self.data} is not symmetric")
-
     @property
     def shape(self):
         return self.data.shape
@@ -29,21 +24,29 @@ class Block:
 
     @property
     def inverse(self):
-        u, s = self.svd
-        block_inv = u.dot(
-            np.diag(1.0 / s)
-        ).dot(
-            u.T
-        )
-        return block_inv
+        if not hasattr(self, '_inverse'):
+            u, s = self.svd
+            self._inverse = u.dot(
+                np.diag(1.0 / s)
+            ).dot(
+                u.T
+            )
+        return self._inverse
 
     @property
-    def log_det(self):
-        _, s = self.svd
-        return np.sum(np.log(s))
+    def log_det(self) -> float:
+        if not hasattr(self, '_log_det'):
+            _, s = self.svd
+            self._log_det = np.sum(np.log(s))
+        return self._log_det
 
     def dot(self, other: np.array):
         return self.data.dot(other)
+
+    def validate(self, rtol: float = 1e-05, atol: float = 1e-08) -> None:
+        """Blocks are always assumed to be square and symmetric."""
+        if not np.allclose(self.data, self.data.T, rtol=rtol, atol=atol):
+            raise ValueError(f"Provided data of {self.data} is not symmetric")
 
 
 class BDMatrix:
