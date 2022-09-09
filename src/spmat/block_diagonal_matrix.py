@@ -1,7 +1,49 @@
 from typing import List
 import numpy as np
+import scipy
 
 from spmat.utils import flatten, compute_svd
+
+
+class Block:
+
+    def __init__(self, data: np.array):
+        self.data = data
+        self.validate()
+
+    def validate(self, rtol: float = 1e-05, atol: float = 1e-08) -> None:
+        """Blocks are always assumed to be square and symmetric."""
+        if not np.allclose(self.data, self.data.T, rtol=rtol, atol=atol):
+            raise ValueError(f"Provided data of {self.data} is not symmetric")
+
+    @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def svd(self):
+        if not hasattr(self, '_svd'):
+            u, s, _ = scipy.linalg.svd(self.data)
+            self._svd = u, s
+        return self._svd
+
+    @property
+    def inverse(self):
+        u, s = self.svd
+        block_inv = u.dot(
+            np.diag(1.0 / s)
+        ).dot(
+            u.T
+        )
+        return block_inv
+
+    @property
+    def log_det(self):
+        _, s = self.svd
+        return np.sum(np.log(s))
+
+    def dot(self, other: np.array):
+        return self.data.dot(other)
 
 
 class BDMatrix:
@@ -11,63 +53,46 @@ class BDMatrix:
     and log_determinant methods, then we can say it implements the SpecialMatrix protocol."""
 
     def __init__(self, data: np.array, block_sizes: List[int]):
-        self.matrix = data
+        self.data = data
         # Flatten the matrix into a 1-D vector according to block sizes
-        self.flat_matrix = flatten(data, block_sizes)
+        # Why flatten? Store as array of blocks?
+        # self.flat_matrix = flatten(data, block_sizes)
         self.block_sizes = block_sizes
 
     @property
-    def block_svd(self) -> np.array:
-        """Lazy loads the SVD of each block in the array."""
-        # Lazy loading is often a useful paradigm to compute something expensive
-        # the first time it's needed, not necessarily on startup.
-        if not hasattr(self, '_block_svd'):
-            self._block_svd = compute_svd(self.flat_matrix, self.block_sizes)
-        return self._block_svd
+    def blocks(self) -> List[Block]:
+        """Lazy loads a list of block classes."""
+        if not hasattr(self, '_blocks'):
+            self._blocks = flatten(self.data, self.block_sizes)
+        return self._blocks
 
     def dot(self, other: np.array) -> np.array:
         # Flatten the other array and do the dot in loops
         # First pass: Assume other is always a 1D numpy array, organized into the same blocks.
         result = np.array([])
-        curr_start = 0
-        for block in self.block_sizes:
-            curr_end = curr_start + block
-            dot_prod = self.matrix[curr_start:curr_end, curr_start:curr_end].reshape(
-                (block, block)
-            ).dot(
-                other[curr_start:curr_end]
-            )
-            result = np.hstack(result, dot_prod)
-            curr_start = curr_end
+        curr_idx = 0
+        for block in self.blocks:
+            # Can we always assume "other" is a 1 or 2D array?
+            rows, _ = block.shape
+            dot_subset = block.dot(other[curr_idx:curr_idx + rows])
+            curr_idx += rows
+            result = np.vstack(result, dot_subset)
         return result
 
     def inv_dot(self, other: np.array) -> np.array:
         """Returns the inverse of this matrix dot the input."""
-        u, s = self.block_svd
-        curr_start = 0
+        curr_idx = 0
         result = np.array([])
-        for block in self.block_sizes:
-            # invert the s and multiply?
-            curr_end = curr_start + block
-            block_inverse = np.invert(
-                                s[curr_start:curr_end]
-                            ).dot(
-                                other[curr_start:curr_end]
-                            )
-            result = np.hstack(result, block_inverse)
-            curr_start = curr_end
+        for block in self.blocks:
+            rows, _ = block.shape
+            invdot_subset = block.inverse.dot(other[curr_idx:curr_idx + rows])
+            result = np.vstack([result, invdot_subset])
+            curr_idx += rows
         return result
 
-    def log_determinant(self) -> np.array:
-        # Multiply the singular matrix diagonal by block
-        # Return type? Array or a single value?
-        _, s = self.block_svd
-        result = np.array([])
-        curr_start = 0
-        for block in self.block_sizes:
-            curr_end = curr_start + block
-            np.append(result, s[curr_start:curr_end].prod())
-            curr_start = curr_end
-        return result
-
-
+    @property
+    def log_determinant(self) -> float:
+        """Sum of the logs."""
+        if not hasattr(self, '_log_determinant'):
+            self._log_determinant = np.sum([block.log_det for block in self.blocks])
+        return self._log_determinant

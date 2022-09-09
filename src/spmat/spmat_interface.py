@@ -25,5 +25,3 @@ class SpecialMatrix(Protocol):
     def log_determinant(self) -> float:
         """Log determinant"""
         raise NotImplementedError
-
-

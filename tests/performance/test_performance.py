@@ -6,7 +6,7 @@ import pytest
 from scipy.linalg import block_diag
 
 from spmat.dlmat import BDLMat
-
+# https://asv.readthedocs.io/en/stable/using.html
 
 def timer(func: Callable):
     """Quick and dirty wrapper to log execution time of a given function.
@@ -41,13 +41,13 @@ class MockBDLMat(BDLMat):
 
 
 @pytest.fixture(scope='module')
-def large_matrix():
+def large_matrix(num_rows: int):
     # Arbitrary decision: Create 1_000 2D arrays, each dimension ranges from 1 to 1000
     # Expected output: will get a block diagonal matrix with average dimensions of
     # (500_000, 500_000), along with appropriate dimensions
     arrays = []
-    for _ in range(200_000):
-        size = np.random.randint(1, 5)
+    for _ in range(num_rows):
+        size = np.random.randint(1, 5000)
         arrays.append(np.random.randn(size, size))
 
     return block_diag(arrays)
