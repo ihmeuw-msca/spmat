@@ -3,7 +3,6 @@ Utility functions
 """
 from typing import Iterable, Tuple, List
 import numpy as np
-from scipy.linalg import svd
 
 
 def to_numpy(array: Iterable,
@@ -16,27 +15,6 @@ def to_numpy(array: Iterable,
             raise ValueError(f"`array` ndim must be in {ndim}.")
 
     return array
-
-
-def flatten(matrix: np.array, block_sizes: List[int]) -> np.array:
-    """Flattens a block diagonal matrix into a 1-d vector.
-    Why not store as list of arrays?
-    Assumes every block is square"""
-
-    # Validate that shapes match
-    block_sum = np.sum(np.array(block_sizes), axis=0)
-    if (block_sum, block_sum) != matrix.shape:
-        raise ValueError(f"Input matrix has dimensions {matrix.shape}, "
-                         f"but provided blocks sum to shape {[block_sum] * 2}. "
-                         f"The shapes must exactly match.")
-
-    result = np.array([])
-    curr_idx = 0
-    for nvals in block_sizes:
-        flat_mat = matrix[curr_idx:curr_idx + nvals, curr_idx:curr_idx + nvals].flatten()
-        result = np.hstack((result, flat_mat))
-        curr_idx += nvals
-    return result
 
 
 def split(array: Iterable,

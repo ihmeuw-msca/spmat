@@ -2,8 +2,6 @@ from typing import List
 import numpy as np
 import scipy
 
-from spmat.utils import flatten, compute_svd
-
 
 class Block:
 
@@ -57,16 +55,24 @@ class BDMatrix:
 
     def __init__(self, data: np.array, block_sizes: List[int]):
         self.data = data
-        # Flatten the matrix into a 1-D vector according to block sizes
-        # Why flatten? Store as array of blocks?
-        # self.flat_matrix = flatten(data, block_sizes)
         self.block_sizes = block_sizes
+        # Validate that shapes match
+        block_sum = np.sum(np.array(block_sizes), axis=0)
+        if (block_sum, block_sum) != data.shape:
+            raise ValueError(f"Input matrix has dimensions {data.shape}, "
+                             f"but provided blocks sum to shape {[block_sum] * 2}. "
+                             f"The shapes must exactly match.")
 
     @property
     def blocks(self) -> List[Block]:
         """Lazy loads a list of block classes."""
         if not hasattr(self, '_blocks'):
-            self._blocks = flatten(self.data, self.block_sizes)
+            self._blocks = []
+            curr_idx = 0
+            for nvals in self.block_sizes:
+                flat_mat = self.data[curr_idx:curr_idx + nvals, curr_idx:curr_idx + nvals]
+                self._blocks.append(flat_mat)
+                curr_idx += nvals
         return self._blocks
 
     def dot(self, other: np.array) -> np.array:
@@ -77,6 +83,7 @@ class BDMatrix:
         for block in self.blocks:
             # Can we always assume "other" is a 1 or 2D array?
             rows, _ = block.shape
+            # TODO: need to examine requirements for the "other" vector
             dot_subset = block.dot(other[curr_idx:curr_idx + rows])
             curr_idx += rows
             result = np.vstack(result, dot_subset)
