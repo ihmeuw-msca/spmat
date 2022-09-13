@@ -42,7 +42,10 @@ class Block:
         return self.data.dot(other)
 
     def validate(self, rtol: float = 1e-05, atol: float = 1e-08) -> None:
-        """Blocks are always assumed to be square and symmetric."""
+        """Blocks are always assumed to be square and symmetric.
+
+        Is this validation necessary? For many blocks the one-off validation
+        might not be worth it."""
         if not np.allclose(self.data, self.data.T, rtol=rtol, atol=atol):
             raise ValueError(f"Provided data of {self.data} is not symmetric")
 
@@ -71,7 +74,7 @@ class BDMatrix:
             curr_idx = 0
             for nvals in self.block_sizes:
                 flat_mat = self.data[curr_idx:curr_idx + nvals, curr_idx:curr_idx + nvals]
-                self._blocks.append(flat_mat)
+                self._blocks.append(Block(flat_mat))
                 curr_idx += nvals
         return self._blocks
 
