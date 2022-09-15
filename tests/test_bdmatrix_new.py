@@ -51,6 +51,14 @@ def test_block_matrix():
     assert np.allclose(bd_matrix.inv_dot(other_mat),
                        np.linalg.inv(bd_matrix.data).dot(other_mat))
 
+    # Test with a 2d array too
+    other_mat_2d = np.random.randn(6, 2)
+    assert np.allclose(bd_matrix.dot(other_mat_2d), bd_matrix.data.dot(other_mat_2d))
+
+    # Inverse dot
+    assert np.allclose(bd_matrix.inv_dot(other_mat_2d),
+                       np.linalg.inv(bd_matrix.data).dot(other_mat_2d))
+
     # Assert the SVD has been calculated dynamically
     assert all([hasattr(block, '_svd') for block in bd_matrix.blocks])
 
