@@ -5,9 +5,10 @@ import scipy
 
 class Block:
 
-    def __init__(self, data: np.array):
+    def __init__(self, data: np.array, validate: bool = False):
         self.data = data
-        self.validate()
+        if validate:
+            self.validate()
 
     @property
     def shape(self):
@@ -89,7 +90,7 @@ class BDMatrix:
     def log_determinant(self) -> float:
         """Sum of the logs."""
         if not hasattr(self, '_log_determinant'):
-            self._log_determinant = np.sum([block.log_det for block in self.blocks])
+            self._log_determinant = sum([block.log_det for block in self.blocks])
         return self._log_determinant
 
     def validate(self):
@@ -111,8 +112,9 @@ class BDMatrix:
         # Split the other array by index. np.cumsum gets the indices to split on
         # exclude the last value to avoid returning a single empty array at the end
         split_array = np.split(other, np.cumsum(self.block_sizes[:-1]))
-        result = np.hstack([block.dot(vector)
-                            for block, vector in zip(self.blocks, split_array)])
+        result = np.concatenate(
+            [block.dot(vector) for block, vector in zip(self.blocks, split_array)]
+        )
         return result
 
     def inv_dot(self, other: np.array) -> np.array:
@@ -125,8 +127,9 @@ class BDMatrix:
         # Split the other array by index. np.cumsum gets the indices to split on
         # exclude the last value to avoid returning a single empty array at the end
         split_array = np.split(other, np.cumsum(self.block_sizes[:-1]))
-        result = np.hstack([block.inv_dot(vector)
-                            for block, vector in zip(self.blocks, split_array)])
+        result = np.concatenate(
+            [block.inv_dot(vector) for block, vector in zip(self.blocks, split_array)]
+        )
         return result
 
     def __repr__(self):
