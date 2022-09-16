@@ -59,7 +59,7 @@ def test_block_matrix():
     assert np.allclose(bd_matrix.inv_dot(other_mat_2d),
                        np.linalg.inv(bd_matrix.data).dot(other_mat_2d))
 
-    # Assert the SVD has been calculated dynamically
+    # Assert the SVD has been calculated dynamically and cached
     assert all([hasattr(block, '_svd') for block in bd_matrix.blocks])
 
     # Assert the log determinant exists
