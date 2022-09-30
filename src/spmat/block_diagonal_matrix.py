@@ -1,4 +1,3 @@
-from typing import List, Tuple
 import numpy as np
 import scipy
 
@@ -63,19 +62,19 @@ class BDMatrix:
     If this class (or any class) has a matrix attribute, and implements the dot, inv_dot,
     and log_determinant methods, then we can say it implements the SpecialMatrix protocol."""
 
-    def __init__(self, data: np.array, block_sizes: List[int]):
+    def __init__(self, data: np.array, block_sizes: list[int]):
         self.data = data
         self.block_sizes = block_sizes
         # Validate that shapes match
         self.validate()
 
     @property
-    def shape(self) -> Tuple[int]:
+    def shape(self) -> tuple[int]:
         """Shape of the input data."""
         return self.data.shape
 
     @property
-    def blocks(self) -> List[Block]:
+    def blocks(self) -> list[Block]:
         """Lazy loads a list of block classes."""
         if not hasattr(self, '_blocks'):
             self._blocks = []
