@@ -1,6 +1,8 @@
+from abc import abstractmethod
 import argparse
 from collections import defaultdict
 import json
+import logging
 import numpy as np
 import scipy
 import time
@@ -16,7 +18,19 @@ from spmat.block_diagonal_matrix import BDMatrix
 # 2. Small number of large blocks
 
 FIXED_SIZE = 4  # Dimension of the parameter to be fixed
-VARIABLE_SIZE = [1000, 2000, 5000, 10000, 20000, 50000]  # Values to test scaling over
+VARIABLE_SIZE = [1000, 2000, 5000, 10000, 15000]  # Values to test scaling over
+NUM_ITERATIONS = 10
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s",
+                              "%Y-%m-%d %H:%M:%S")
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 
 
 class Timer:
@@ -25,22 +39,29 @@ class Timer:
     matrix functions. A matrix with a shape must be the first positional argument."""
 
     # Method cache intended to be reused across timer instances, so used as a class variable.
-    method_cache: defaultdict = defaultdict(dict)
+    method_cache: defaultdict = defaultdict(list)
 
-    def __init__(self, func: Callable):
-        self.func = func
+    def __init__(self, implementation: str):
+        self.implementation = implementation
 
-    def __call__(self, num_blocks, block_size, *args, **kwargs):
+    def __call__(self, func: Callable):
         """Wrapper around a call to record elapsed runtime.
         Must provide the number of blocks and block size as the first two arguments,
         for caching purposes."""
-        start = time.time()
-        res = self.func(*args, **kwargs)
-        end = time.time()
-        # Store the elapsed runtime in a cache on the class
-        # Note that this caching expects uniqueness by function name
-        self.method_cache[self.func.__name__][(num_blocks, block_size)] = end - start
-        return res
+
+        def wrapper(num_blocks: int, block_size: int, *args, **kwargs):
+            start = time.time()
+            res = func(*args, **kwargs)
+            end = time.time()
+            # Store the elapsed runtime in a cache on the class
+            # Log to notify of progress
+            self.method_cache['algorithm'].append(func.__name__)
+            self.method_cache['implementation'].append(self.implementation)
+            self.method_cache['num_blocks'].append(num_blocks)
+            self.method_cache['block_size'].append(block_size)
+            self.method_cache['runtime'].append(end - start)
+            return res
+        return wrapper
 
     @classmethod
     def to_json(cls, outfile: str):
@@ -62,39 +83,72 @@ def create_diagonal_matrix(num_blocks, block_size):
     return scipy.linalg.block_diag(*blocks)
 
 
-class NumpyTest:
+class Test:
+
+    @abstractmethod
+    def dot():
+        NotImplemented
+
+    @abstractmethod
+    def inv_dot():
+        NotImplemented
+
+    @abstractmethod
+    def log_det():
+        NotImplemented
+
+    @classmethod
+    def run_benchmarks(cls, num_blocks: int, block_size: int, mat1, mat2) -> None:
+        # Run multiple times so we can take averages
+        for i in range(NUM_ITERATIONS):
+            # Give percentages every 10 percent
+            chunk = NUM_ITERATIONS // 10
+            if i % chunk == 0 and i > 0:
+                logger.info(f"Profiling for (num_blocks, block_size) {(num_blocks, block_size)}: "
+                            f"{(i / NUM_ITERATIONS) * 100}% done")
+            cls.dot(num_blocks, block_size, mat1, mat2)
+            cls.inv_dot(num_blocks, block_size, mat1, mat2)
+            cls.log_det(num_blocks, block_size, mat1)
+
+
+class ScipySparseTest:
+    # TODO: add this scipy sparse benchmark
+    pass
+
+
+class NumpyTest(Test):
 
     @staticmethod
-    @Timer
-    def numpy_dot(mat1: np.array, mat2: np.array):
+    @Timer(implementation='numpy')
+    def dot(mat1: np.array, mat2: np.array):
         return mat1.dot(mat2)
 
     @staticmethod
-    @Timer
-    def numpy_inv_dot(mat1: np.array, mat2: np.array):
-        return np.linalg.inv(mat1).dot(mat2)
+    @Timer(implementation='numpy')
+    def inv_dot(mat1: np.array, mat2: np.array):
+        return np.linalg.solve(mat1, mat2)
 
     @staticmethod
-    @Timer
-    def numpy_log_det(mat1: np.array):
+    @Timer(implementation='numpy')
+    def log_det(mat1: np.array):
         return np.linalg.slogdet(mat1)
 
 
-class BDMatrixTest:
+class BDMatrixTest(Test):
 
     @staticmethod
-    @Timer
-    def bdmat_dot(bdmat: BDMatrix, mat2: np.array):
+    @Timer(implementation='raw_python')
+    def dot(bdmat: BDMatrix, mat2: np.array):
         return bdmat.dot(mat2)
 
     @staticmethod
-    @Timer
-    def bdmat_inv_dot(bdmat: BDMatrix, mat2: np.array):
+    @Timer(implementation='raw_python')
+    def inv_dot(bdmat: BDMatrix, mat2: np.array):
         return bdmat.inv_dot(mat2)
 
     @staticmethod
-    @Timer
-    def bdmat_log_det(bdmat: BDMatrix):
+    @Timer(implementation='raw_python')
+    def log_det(bdmat: BDMatrix):
         return bdmat.log_determinant
 
 
@@ -109,26 +163,23 @@ def perf_test():
             other_mat = np.random.randn(num * FIXED_SIZE, 2)
 
             # Compute and store numpy results
-            NumpyTest.numpy_dot(num_blocks, block_size, mat, other_mat)
-            NumpyTest.numpy_inv_dot(num_blocks, block_size, mat, other_mat)
-            NumpyTest.numpy_log_det(num_blocks, block_size, mat)
+            NumpyTest.run_benchmarks(num_blocks, block_size, mat, other_mat)
 
             # Do the same for BDMatrix results
-            bdmat = BDMatrix(mat, [block_size] * num_blocks)
-            BDMatrixTest.bdmat_dot(num_blocks, block_size, bdmat, other_mat)
             # Note that results might potentially be confounded slightly. Both invdot and log_det
             # involve use of the matrix's singular values, which are lazily calculated. Therefore
             # whichever method is profiled first will incur the extra runtime of calculating the
             # SVD, and the second method will likely be much faster.
-            BDMatrixTest.bdmat_inv_dot(num_blocks, block_size, bdmat, other_mat)
-            BDMatrixTest.bdmat_log_det(num_blocks, block_size, bdmat)
+            bdmat = BDMatrix(mat, [block_size] * num_blocks)
+            BDMatrixTest.run_benchmarks(num_blocks, block_size, bdmat, other_mat)
 
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument("--filepath")
+    argparser.add_argument("--filepath", default=None)
     args = argparser.parse_args()
     filepath = args.filepath
     perf_test()  # Runs all the tests
     # Serialize here, plot in a different step
-    Timer.to_json(filepath)
+    if filepath:
+        Timer.to_json(filepath)
