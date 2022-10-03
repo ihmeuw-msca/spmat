@@ -42,3 +42,4 @@ def create_bdiag_mat(mats: List[np.ndarray]) -> np.ndarray:
         bdiag_mat[np.ix_(row_idx[i], col_idx[i])] = mat
 
     return bdiag_mat
+

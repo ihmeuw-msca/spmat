@@ -74,6 +74,8 @@ class ILMat:
         -------
         ndarray
         """
+        # Rank: L is low rank, so assume tall, skinny matrix
+        # Number of elements in L is small
         x = utils.to_numpy(x, ndim=(1, 2))
         return x + (self._u*self._v) @ (self._u.T @ x)
 
