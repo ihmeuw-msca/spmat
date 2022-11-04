@@ -21,8 +21,7 @@ jobs:
       - name: Install blas and lapack
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            echo $RUNNER_OS
-            apt-get install libblas-dev liblapack-dev
+            sudo apt-get install libblas-dev liblapack-dev
           fi
       - name: Install cibuildwheel
         run: |
