@@ -18,6 +18,12 @@ jobs:
         name: Install Python 3.8
         with:
           python-version: 3.8
+      - name: Install blas and lapack
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            echo $RUNNER_OS
+            apt-get install libblas-dev liblapack-dev
+          fi
       - name: Install cibuildwheel
         run: |
           python -m pip install cibuildwheel
