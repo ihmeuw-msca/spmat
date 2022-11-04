@@ -1,10 +1,9 @@
 import sys
 from pathlib import Path
-from setuptools import setup, find_packages
 
 import numpy
 from Cython.Build import cythonize
-
+from setuptools import find_packages, setup
 
 if __name__ == "__main__":
     base_dir = Path(__file__).parent
@@ -28,28 +27,30 @@ if __name__ == "__main__":
 
     doc_requirements = []
 
-    setup(name=about.__title__,
-          version=about.__version__,
+    setup(
+        name=about.__title__,
+        version=about.__version__,
 
-          description=about.__summary__,
-          long_description=long_description,
-          license=about.__license__,
-          url=about.__uri__,
+        description=about.__summary__,
+        long_description=long_description,
+        license=about.__license__,
+        url=about.__uri__,
 
-          author=about.__author__,
-          author_email=about.__email__,
+        author=about.__author__,
+        author_email=about.__email__,
 
-          package_dir={"": "src"},
-          packages=find_packages(where="src"),
-          include_package_data=True,
+        package_dir={"": "src"},
+        packages=find_packages(where="src"),
+        include_package_data=True,
 
-          install_requires=install_requirements,
-          tests_require=test_requirements,
-          extras_require={
-              "docs": doc_requirements,
-              "test": test_requirements,
-              "dev": doc_requirements + test_requirements
-          },
-          ext_modules=cythonize(["src/spmat/linalg.pyx"]),
-          include_dirs=[numpy.get_include()],
-          zip_safe=False,)
+        install_requires=install_requirements,
+        tests_require=test_requirements,
+        extras_require={
+            "docs": doc_requirements,
+            "test": test_requirements,
+            "dev": doc_requirements + test_requirements
+        },
+        ext_modules=cythonize([str(src_dir / "linalg.pyx")]),
+        include_dirs=[numpy.get_include()],
+        zip_safe=False,
+    )
