@@ -48,3 +48,9 @@ def test_diag(ilmat):
     my_result = ilmat.diag()
     tr_result = np.diag(ilmat.mat)
     assert np.allclose(my_result, tr_result)
+
+
+def test_invdiag(ilmat):
+    my_result = ilmat.invdiag()
+    tr_result = np.diag(np.linalg.inv(ilmat.mat))
+    assert np.allclose(my_result, tr_result)

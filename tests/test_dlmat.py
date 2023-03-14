@@ -49,3 +49,9 @@ def test_diag(dlmat):
     my_result = dlmat.diag()
     tr_result = np.diag(dlmat.mat)
     assert np.allclose(my_result, tr_result)
+
+
+def test_invdiag(dlmat):
+    my_result = dlmat.invdiag()
+    tr_result = np.diag(np.linalg.inv(dlmat.mat))
+    assert np.allclose(my_result, tr_result)

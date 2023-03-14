@@ -66,8 +66,7 @@ class ILMat:
         return np.identity(self.dsize) + (self._u * self._w) @ self._u.T
 
     def dot(self, x: Iterable) -> NDArray:
-        """
-        Dot product with vector or matrix
+        """Dot product with vector or matrix
 
         Parameters
         ----------
@@ -83,8 +82,7 @@ class ILMat:
         return x + (self._u * self._v) @ (self._u.T @ x)
 
     def invdot(self, x: Iterable) -> NDArray:
-        """
-        Inverse dot product with vector or matrix
+        """Inverse dot product with vector or matrix
 
         Parameters
         ----------
@@ -99,13 +97,11 @@ class ILMat:
         return x + (self._u * self._w) @ (self._u.T @ x)
 
     def logdet(self) -> float:
-        """
-        Log determinant
+        """Log determinant
 
         Returns
         -------
         float
-            Log determinant of the matrix.
 
         """
         return np.log(1 + self._v).sum()
@@ -116,10 +112,19 @@ class ILMat:
         Returns
         -------
         NDArray
-            Diagonal of the matrix.
 
         """
         return 1.0 + (self.lmat**2).sum(axis=1)
+
+    def invdiag(self) -> NDArray:
+        """Diagonal of the inverse of the matrix
+
+        Returns
+        -------
+        NDArray
+
+        """
+        return 1.0 + (self._u**2 * self._w).sum(axis=1)
 
     def __repr__(self) -> str:
         return f"ILMat(dsize={self.dsize}, lrank={self.lrank})"
@@ -180,6 +185,11 @@ class BILMat:
 
     def diag(self) -> NDArray:
         return 1.0 + (self.lmats**2).sum(axis=1)
+
+    def invdiag(self) -> NDArray:
+        return 1.0 + linalg.block_rowsum(
+            self._u**2, self._w, self.dsizes, self.lranks
+        )
 
     def __repr__(self) -> str:
         return f"BILMat(dsize={self.dsize}, num_blocks={self.dsizes.size})"
@@ -255,8 +265,7 @@ class DLMat:
         return self.ilmat.invmat / (self.sdvec[:, np.newaxis] * self.sdvec)
 
     def dot(self, x: Iterable) -> NDArray:
-        """
-        Inverse dot product with vector or matrix
+        """Inverse dot product with vector or matrix
 
         Parameters
         ----------
@@ -274,8 +283,7 @@ class DLMat:
         return x
 
     def invdot(self, x: Iterable) -> NDArray:
-        """
-        Inverse dot product with vector or matrix
+        """Inverse dot product with vector or matrix
 
         Parameters
         ----------
@@ -285,6 +293,7 @@ class DLMat:
         Returns
         -------
         NDArray
+
         """
         x = utils.to_numpy(x, ndim=(1, 2))
         x = (x.T / self.sdvec).T
@@ -293,13 +302,13 @@ class DLMat:
         return x
 
     def logdet(self) -> float:
-        """
-        Log determinant
+        """Log determinant
 
         Returns
         -------
         float
             Log determinant of the matrix.
+
         """
         return np.log(self.dvec).sum() + self.ilmat.logdet()
 
@@ -309,10 +318,19 @@ class DLMat:
         Returns
         -------
         NDArray
-            Diagonal of the matrix.
 
         """
         return self.dvec + (self.lmat**2).sum(axis=1)
+
+    def invdiag(self) -> NDArray:
+        """Diagonal of the inverse of the matrix
+
+        Returns
+        -------
+        NDArray
+
+        """
+        return self.ilmat.invdiag() / self.dvec
 
     def __repr__(self) -> str:
         return f"DLMat(dsize={self.dsize}, lrank={self.lrank})"
@@ -372,8 +390,7 @@ class BDLMat:
         return self.dsizes.size
 
     def dot(self, x: NDArray) -> NDArray:
-        """
-        Inverse dot product with vector or matrix
+        """Inverse dot product with vector or matrix
 
         Parameters
         ----------
@@ -383,6 +400,7 @@ class BDLMat:
         Returns
         -------
         NDArray
+
         """
         x = np.ascontiguousarray(x)
         x = (x.T * self.sdvecs).T
@@ -391,8 +409,7 @@ class BDLMat:
         return x
 
     def invdot(self, x: NDArray) -> NDArray:
-        """
-        Inverse dot product with vector or matrix
+        """Inverse dot product with vector or matrix
 
         Parameters
         ----------
@@ -402,6 +419,7 @@ class BDLMat:
         Returns
         -------
         NDArray
+
         """
         x = np.ascontiguousarray(x)
         x = (x.T / self.sdvecs).T
@@ -410,13 +428,12 @@ class BDLMat:
         return x
 
     def logdet(self) -> float:
-        """
-        Log determinant
+        """Log determinant
 
         Returns
         -------
         float
-            Log determinant of the matrix.
+
         """
         return np.log(self.dvecs).sum() + self.bilmat.logdet()
 
@@ -426,10 +443,19 @@ class BDLMat:
         Returns
         -------
         NDArray
-            Diagonal of the matrix.
 
         """
         return self.dvecs + (self.lmats**2).sum(axis=1)
+
+    def invdiag(self) -> NDArray:
+        """Diagonal of the inverse of the matrix
+
+        Returns
+        -------
+        NDArray
+
+        """
+        return self.bilmat.invdiag() / self.dvecs
 
     def __repr__(self) -> str:
         return f"BDLMat(dsize={self.dsize}, num_blocks={self.num_blocks})"

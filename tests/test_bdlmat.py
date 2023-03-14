@@ -63,3 +63,9 @@ def test_diag(bdlmat):
     my_result = bdlmat.diag()
     tr_result = np.diag(bdlmat.mat)
     assert np.allclose(my_result, tr_result)
+
+
+def test_invdiag(bdlmat):
+    my_result = bdlmat.invdiag()
+    tr_result = np.diag(np.linalg.inv(bdlmat.mat))
+    assert np.allclose(my_result, tr_result)

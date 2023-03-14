@@ -177,3 +177,40 @@ def block_mmdot(double[::1] u_view,
             y_view[i, j] += x_view[i, j]
 
     return y
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def block_rowsum(double[::1] u_view,
+                 double[::1] v_view,
+                 long[::1] n_view,
+                 long[::1] k_view):
+    cdef int dim_row
+    cdef int dim_col
+    cdef int one_int = 1
+    cdef double zero_double = 0
+    cdef double one_double = 1
+
+    y = np.empty(np.array(n_view).sum(), dtype=np.float_)
+    cdef double[::1] y_view = y
+    cdef int i
+    cdef int ind_u = 0
+    cdef int ind_v = 0
+    cdef int ind_y = 0
+
+    # compute y = u @ v
+    for i in range(n_view.size):
+        dim_row = n_view[i]
+        dim_col = k_view[i]
+
+        blas.dgemv("T",
+                   &dim_col, &dim_row, &one_double,
+                   &u_view[ind_u], &dim_col,
+                   &v_view[ind_v], &one_int, &zero_double,
+                   &y_view[ind_y], &one_int)
+
+        ind_y += dim_row
+        ind_v += dim_col
+        ind_u += dim_row*dim_col
+
+    return y
