@@ -1,10 +1,10 @@
 """
 Test DLMat
 """
-import pytest
 import numpy as np
-from spmat import DLMat
+import pytest
 
+from spmat import DLMat
 
 # pylint: disable=redefined-outer-name
 
@@ -25,16 +25,14 @@ def test_dlmat(dlmat):
     assert np.allclose(my_result, tr_result)
 
 
-@pytest.mark.parametrize("array", [np.random.randn(SHAPE[0]),
-                                   np.random.randn(*SHAPE)])
+@pytest.mark.parametrize("array", [np.random.randn(SHAPE[0]), np.random.randn(*SHAPE)])
 def test_dot(dlmat, array):
     my_result = dlmat.dot(array)
     tr_result = dlmat.mat.dot(array)
     assert np.allclose(my_result, tr_result)
 
 
-@pytest.mark.parametrize("array", [np.random.randn(SHAPE[0]),
-                                   np.random.randn(*SHAPE)])
+@pytest.mark.parametrize("array", [np.random.randn(SHAPE[0]), np.random.randn(*SHAPE)])
 def test_invdot(dlmat, array):
     my_result = dlmat.invdot(array)
     tr_result = np.linalg.solve(dlmat.mat, array)
@@ -45,3 +43,15 @@ def test_logdet(dlmat):
     my_result = dlmat.logdet()
     tr_result = np.linalg.slogdet(dlmat.mat)[1]
     assert np.isclose(my_result, tr_result)
+
+
+def test_diag(dlmat):
+    my_result = dlmat.diag()
+    tr_result = np.diag(dlmat.mat)
+    assert np.allclose(my_result, tr_result)
+
+
+def test_invdiag(dlmat):
+    my_result = dlmat.invdiag()
+    tr_result = np.diag(np.linalg.inv(dlmat.mat))
+    assert np.allclose(my_result, tr_result)
