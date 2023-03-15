@@ -367,8 +367,8 @@ class BDLMat:
         Log determinant of the matrix.
     """
 
-    def __init__(self, diags: Iterable, lmats: Iterable, dsizes: Iterable):
-        self.dvecs = np.ascontiguousarray(diags)
+    def __init__(self, dvecs: Iterable, lmats: Iterable, dsizes: Iterable):
+        self.dvecs = np.ascontiguousarray(dvecs)
         self.lmats = np.ascontiguousarray(lmats)
         self.dsizes = np.ascontiguousarray(dsizes)
         self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
