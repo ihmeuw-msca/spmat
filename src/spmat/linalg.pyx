@@ -18,9 +18,9 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
     cdef int ind_s = 0
     cdef int info
 
-    u = np.empty(np.array(n_view).dot(np.array(k_view)), dtype=np.float_)
-    s = np.empty(np.array(k_view).sum(), dtype=np.float_)
-    w = np.empty(lwork, dtype=np.float_)
+    u = np.empty(np.array(n_view).dot(np.array(k_view)), dtype=np.float64)
+    s = np.empty(np.array(k_view).sum(), dtype=np.float64)
+    w = np.empty(lwork, dtype=np.float64)
     cdef double[::1] u_view = u
     cdef double[::1] s_view = s
     cdef double[::1] w_view = w
@@ -58,8 +58,8 @@ def block_mvdot(double[::1] u_view,
     cdef double zero_double = 0
     cdef double one_double = 1
 
-    t = np.empty(np.array(k_view).sum(), dtype=np.float_)
-    y = np.empty(np.array(n_view).sum(), dtype=np.float_)
+    t = np.empty(np.array(k_view).sum(), dtype=np.float64)
+    y = np.empty(np.array(n_view).sum(), dtype=np.float64)
     cdef double[::1] y_view = y
     cdef double[::1] t_view = t
     cdef int i
@@ -124,8 +124,8 @@ def block_mmdot(double[::1] u_view,
     cdef double zero_double = 0
     cdef double one_double = 1
 
-    t = np.empty((np.array(k_view).sum(), num_col), dtype=np.float_)
-    y = np.empty((np.array(n_view).sum(), num_col), dtype=np.float_)
+    t = np.empty((np.array(k_view).sum(), num_col), dtype=np.float64)
+    y = np.empty((np.array(n_view).sum(), num_col), dtype=np.float64)
     cdef double[:, ::1] y_view = y
     cdef double[:, ::1] t_view = t
     cdef int i, j
@@ -191,7 +191,7 @@ def block_rowsum(double[::1] u_view,
     cdef double zero_double = 0
     cdef double one_double = 1
 
-    y = np.empty(np.array(n_view).sum(), dtype=np.float_)
+    y = np.empty(np.array(n_view).sum(), dtype=np.float64)
     cdef double[::1] y_view = y
     cdef int i
     cdef int ind_u = 0
