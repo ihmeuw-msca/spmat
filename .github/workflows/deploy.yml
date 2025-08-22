@@ -1,82 +1,196 @@
-name: deploy
+# =============================================================================
+# GitHub Actions Workflow: Deploy to PyPI
+# =============================================================================
+# This workflow automatically builds and publishes the spmat package to PyPI
+# when a new version tag is pushed to the repository.
+#
+# Trigger: Push of version tags (e.g., v1.0.0, v2.1.3)
+# Output: Published package on PyPI with wheels for multiple platforms
+# =============================================================================
 
+name: Deploy to PyPI
+
+# =============================================================================
+# Workflow Triggers
+# =============================================================================
 on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
+# =============================================================================
+# Workflow Permissions
+# =============================================================================
 permissions:
-  contents: write
+  contents: write  # Required for uploading artifacts
+
+# =============================================================================
+# Job Definitions
+# =============================================================================
 
 jobs:
+  # ========================================================================
+  # Job: Build Platform-Specific Wheels
+  # ========================================================================
+  # This job builds wheel distributions for multiple operating systems
+  # and CPU architectures to ensure broad compatibility.
+  # ========================================================================
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    
     strategy:
       matrix:
-        # Both macOS runners to cover Intel (macos-13) and Apple Silicon (macos-latest)
-        os: [ubuntu-latest, windows-latest, universal2]
+        # Platform matrix covering major operating systems and architectures
+        os: [
+          ubuntu-latest,    # Linux (x86_64)
+          windows-latest,   # Windows (x86_64)
+          universal2        # macOS (Intel + Apple Silicon universal binary)
+        ]
 
     steps:
-      - uses: actions/checkout@v4
+      # ====================================================================
+      # Step: Checkout Repository
+      # ====================================================================
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for proper versioning
 
-      - name: Set up host Python
+      # ====================================================================
+      # Step: Setup Python Environment
+      # ====================================================================
+      - name: Set up Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"  # Use latest stable Python version
+
+      # ====================================================================
+      # Step: Build Platform Wheels
+      # ====================================================================
+      - name: Build wheels with cibuildwheel
+        uses: pypa/cibuildwheel@v3.1.4
+        with:
+          output-dir: wheelhouse  # Directory for built wheels
+        env:
+          # Skip 32-bit Windows builds (not commonly needed)
+          CIBW_SKIP: "*-win32"
+          
+          # Testing configuration for built wheels
+          CIBW_TEST_REQUIRES: "pytest"
+          CIBW_TEST_COMMAND: "pytest -q {project}/tests"
+          
+          # Additional build optimizations
+          CIBW_BUILD_VERBOSITY: "1"  # Moderate verbosity for debugging
+          CIBW_BEFORE_BUILD: "pip install --upgrade pip setuptools wheel"
+
+      # ====================================================================
+      # Step: Upload Wheel Artifacts
+      # ====================================================================
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}  # Unique name per platform
+          path: wheelhouse/*.whl         # Upload all built wheels
+
+  # ========================================================================
+  # Job: Build Source Distribution
+  # ========================================================================
+  # This job creates the source distribution (.tar.gz) which is required
+  # for PyPI publication and serves as a fallback for platforms without
+  # pre-built wheels.
+  # ========================================================================
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    
+    steps:
+      # ====================================================================
+      # Step: Checkout Repository
+      # ====================================================================
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # ====================================================================
+      # Step: Setup Python Environment
+      # ====================================================================
+      - name: Set up Python environment
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Build wheels with cibuildwheel
-        uses: pypa/cibuildwheel@v3.1.4
-        with:
-          output-dir: wheelhouse
-        env:
-          CIBW_SKIP: "*-win32"  # Skip Windows 32-bit builds
-          CIBW_TEST_REQUIRES: "pytest"
-          CIBW_TEST_COMMAND: "pytest -q {project}/tests"
-
-      - name: Upload wheel artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ matrix.os }}
-          path: wheelhouse/*.whl
-
-  build_sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Build sdist
+      # ====================================================================
+      # Step: Build Source Distribution
+      # ====================================================================
+      - name: Build source distribution
         run: |
+          # Upgrade build tools to latest versions
           python -m pip install --upgrade pip build
+          
+          # Build source distribution
           python -m build --sdist
-      - name: Upload sdist artifact
+          
+          # Verify the built sdist
+          ls -la dist/
+
+      # ====================================================================
+      # Step: Upload Source Distribution Artifact
+      # ====================================================================
+      - name: Upload source distribution artifact
         uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
 
+  # ========================================================================
+  # Job: Publish to PyPI
+  # ========================================================================
+  # This job collects all built artifacts and publishes them to PyPI.
+  # It runs only after both wheel and sdist builds complete successfully.
+  # ========================================================================
   upload_pypi:
     name: Publish to PyPI
-    needs: [build_wheels, build_sdist]
+    needs: [build_wheels, build_sdist]  # Wait for all builds to complete
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Download wheel artifacts
+      # ====================================================================
+      # Step: Download Wheel Artifacts
+      # ====================================================================
+      - name: Download wheel artifacts from all platforms
         uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: wheels-*
-          merge-multiple: true
-      - name: Download sdist
+          pattern: wheels-*           # Download all wheel artifacts
+          merge-multiple: true        # Combine into single directory
+
+      # ====================================================================
+      # Step: Download Source Distribution
+      # ====================================================================
+      - name: Download source distribution
         uses: actions/download-artifact@v4
         with:
           name: sdist
           path: dist
-      - name: Publish
+
+      # ====================================================================
+      # Step: Verify Artifacts Before Publishing
+      # ====================================================================
+      - name: Verify artifacts
+        run: |
+          echo "Verifying artifacts before PyPI upload..."
+          echo "Wheels found:"
+          ls -la dist/*.whl || echo "No wheels found"
+          echo "Source distributions found:"
+          ls -la dist/*.tar.gz || echo "No source distributions found"
+
+      # ====================================================================
+      # Step: Publish to PyPI
+      # ====================================================================
+      - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          skip-existing: true
-          user: __token__
+          skip-existing: true     # Skip if version already exists
+          user: __token__         # Use PyPI token authentication
           password: ${{ secrets.PYPI_API_TOKEN }}
+          verbose: true           # Enable verbose output for debugging
