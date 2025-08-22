@@ -1,3 +1,61 @@
 [build-system]
-requires = ["setuptools", "wheel", "numpy", "scipy", "Cython<=3.0.3"]
+requires = ["setuptools", "wheel", "numpy", "scipy", "Cython"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "spmat"
+version = "0.0.12"
+description = "A collection of tools for special matrices"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "BSD-2-Clause" }
+authors = [
+    { name = "Peng Zheng", email = "zhengp@uw.edu" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-mock"]
+docs = []
+dev = ["pytest", "pytest-mock"]
+
+[project.urls]
+Homepage = "https://github.com/zhengp0/spmat"
+Repository = "https://github.com/zhengp0/spmat"
+"Bug Tracker" = "https://github.com/zhengp0/spmat/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.pyx"]
+
+[tool.setuptools.dynamic]
+version = {attr = "spmat.__about__.__version__"}
+
+[tool.setuptools.ext_modules]
+cythonize = ["src/spmat/linalg.pyx"]
+
+[tool.setuptools.include_dirs]
+numpy = "numpy.get_include()"
+
+[tool.setuptools.zip_safe]
+false = true
