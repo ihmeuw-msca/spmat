@@ -3,7 +3,6 @@ from pathlib import Path
 import sys
 
 import numpy as np
-import tomllib
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 
@@ -12,6 +11,10 @@ if __name__ == "__main__":
 
     # Read pyproject.toml
     with (base_dir / "pyproject.toml").open("rb") as f:
+        try:
+            import tomllib
+        except ImportError:
+            import tomli as tomllib
         pyproject = tomllib.load(f)
 
     project = pyproject["project"]

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "numpy", "scipy", "Cython"]
+requires = ["setuptools>=61.0", "wheel", "numpy", "scipy","tomli", "Cython"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,12 +7,13 @@ name = "spmat"
 version = "0.0.12"
 description = "A collection of tools for special matrices"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = { text = "BSD-2-Clause" }
 authors = [
     { name = "Peng Zheng", email = "zhengp@uw.edu" },
 ]
 classifiers = [
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
