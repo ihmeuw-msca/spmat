@@ -1,16 +1,20 @@
 name: test_deploy
 
 on:
+  # Manual run from the Actions tab or gh CLI
   workflow_dispatch:
     inputs:
       os:
-        description: "OS matrix (comma-separated). Leave empty for default."
+        description: "Comma-separated OS filter (e.g. windows-latest,macos-latest). Leave empty for all."
         required: false
         default: ""
       run_tests:
-        description: "Run tests against each built wheel?"
+        description: "Run pytest against each built wheel?"
         type: boolean
         default: true
+  # TEMP: Register & allow runs from your branch without merging to default
+  push:
+    branches: [ feat/add-wheels ]
 
 permissions:
   contents: read
@@ -19,10 +23,12 @@ jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.os != '' && format('["{0}"]', inputs.os) || '["ubuntu-latest","windows-latest","macos-13","macos-latest"]') }}
+        # Both macOS runners to cover Intel (macos-13) and Apple Silicon (macos-latest)
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +43,7 @@ jobs:
         with:
           output-dir: wheelhouse
         env:
-          # Prefer metadata-driven selection: [project] requires-python in pyproject.toml
+          # Prefer metadata-driven selection via [project] requires-python in pyproject.toml
           # CIBW_PROJECT_REQUIRES_PYTHON: ">=3.11"
           # Optional per-wheel tests
           CIBW_TEST_REQUIRES: ${{ inputs.run_tests && 'pytest' || '' }}
@@ -72,16 +78,21 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
-      # Download all wheel artifacts into a single dist/ folder
-      - uses: actions/download-artifact@v4
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
         with:
           path: dist
           pattern: wheels-*
           merge-multiple: true
-      # Download sdist next to wheels
-      - uses: actions/download-artifact@v4
+      - name: Download sdist
+        uses: actions/download-artifact@v4
         with:
           name: sdist
           path: dist
       - name: List outputs
         run: ls -lah dist
+      - name: Re-upload merged dist folder
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
