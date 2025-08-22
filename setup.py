@@ -2,21 +2,27 @@
 from pathlib import Path
 
 import numpy as np
+import tomllib
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 
 if __name__ == "__main__":
     base_dir = Path(__file__).parent
-    src_dir = base_dir / "src" / "spmat"
-
+    
+    # Read pyproject.toml
+    with (base_dir / "pyproject.toml").open("rb") as f:
+        pyproject = tomllib.load(f)
+    
+    project = pyproject["project"]
+    
     # Read long description from README
     with (base_dir / "README.md").open() as f:
         long_description = f.read()
 
-    # Define requirements
-    install_requirements = ["numpy", "scipy"]
-    test_requirements = ["pytest", "pytest-mock"]
-    doc_requirements = []
+    # Get requirements from pyproject.toml
+    install_requirements = project["dependencies"]
+    test_requirements = project["optional-dependencies"]["test"]
+    doc_requirements = project["optional-dependencies"]["docs"]
 
     def get_extensions():
         """Get Cython extensions."""
@@ -30,15 +36,15 @@ if __name__ == "__main__":
         ]
 
     setup(
-        name="spmat",
-        version="0.0.12",
-        description="A collection of tools for special matrices",
+        name=project["name"],
+        version=project["version"],
+        description=project["description"],
         long_description=long_description,
         long_description_content_type="text/markdown",
-        license="BSD 2-Clause License",
-        url="https://github.com/zhengp0/spmat",
-        author="Peng Zheng",
-        author_email="zhengp@uw.edu",
+        license=project["license"]["text"],
+        url=project["urls"]["Homepage"],
+        author=project["authors"][0]["name"],
+        author_email=project["authors"][0]["email"],
         package_dir={"": "src"},
         packages=find_packages(where="src"),
         include_package_data=True,
