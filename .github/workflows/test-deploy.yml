@@ -44,8 +44,9 @@ jobs:
           output-dir: wheelhouse
         env:
           # Prefer metadata-driven selection via [project] requires-python in pyproject.toml
-          # CIBW_PROJECT_REQUIRES_PYTHON: ">=3.11"
+          #CIBW_PROJECT_REQUIRES_PYTHON: ">=3.11"
           # Optional per-wheel tests
+          CIBW_BEFORE_BUILD: "pip install --prefer-binary scipy"
           CIBW_TEST_REQUIRES: ${{ inputs.run_tests && 'pytest' || '' }}
           CIBW_TEST_COMMAND: ${{ inputs.run_tests && 'pytest -q {project}/tests' || '' }}
 
