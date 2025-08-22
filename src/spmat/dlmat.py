@@ -1,6 +1,7 @@
 """
 Sum of diagonal and low rank matrices
 """
+
 from typing import Iterable, List
 
 import numpy as np
@@ -187,9 +188,7 @@ class BILMat:
         return 1.0 + (self.lmats**2).sum(axis=1)
 
     def invdiag(self) -> NDArray:
-        return 1.0 + linalg.block_rowsum(
-            self._u**2, self._w, self.dsizes, self.lranks
-        )
+        return 1.0 + linalg.block_rowsum(self._u**2, self._w, self.dsizes, self.lranks)
 
     def __repr__(self) -> str:
         return f"BILMat(dsize={self.dsize}, num_blocks={self.dsizes.size})"

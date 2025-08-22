@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel", "numpy", "scipy", "Cython"]
+requires = ["setuptools>=61.0", "wheel", "numpy", "scipy", "Cython"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -50,12 +50,3 @@ where = ["src"]
 
 [tool.setuptools.dynamic]
 version = {attr = "spmat.__about__.__version__"}
-
-[tool.setuptools.ext_modules]
-cythonize = ["src/spmat/linalg.pyx"]
-
-[tool.setuptools.include_dirs]
-numpy = "numpy.get_include()"
-
-[tool.setuptools.zip_safe]
-false = true
