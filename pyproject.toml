@@ -7,16 +7,12 @@ name = "spmat"
 version = "0.0.12"
 description = "A collection of tools for special matrices"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 license = { text = "BSD-2-Clause" }
 authors = [
     { name = "Peng Zheng", email = "zhengp@uw.edu" },
 ]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
