@@ -28,7 +28,7 @@ jobs:
       fail-fast: false
       matrix:
         # Both macOS runners to cover Intel (macos-13) and Apple Silicon (macos-latest)
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+        os: [ubuntu-latest, windows-latest, universal2]
 
     steps:
       - uses: actions/checkout@v4
