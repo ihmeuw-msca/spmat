@@ -13,7 +13,6 @@ jobs:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         # Both macOS runners to cover Intel (macos-13) and Apple Silicon (macos-latest)
         os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
