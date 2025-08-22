@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "spmat"
-version = "0.0.12"
+version = "0.1.0"
 description = "A collection of tools for special matrices"
 readme = "README.md"
 requires-python = ">=3.10"
