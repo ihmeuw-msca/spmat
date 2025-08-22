@@ -2,7 +2,10 @@
 from pathlib import Path
 
 import numpy as np
-import tomllib
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 
