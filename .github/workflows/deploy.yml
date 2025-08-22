@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # macos-13 (Intel) + macos-latest (Apple Silicon) for native wheels per arch
+        # Both macOS runners to cover Intel (macos-13) and Apple Silicon (macos-latest)
         os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
 
     steps:
@@ -26,13 +26,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build wheels
+      - name: Build wheels with cibuildwheel
         uses: pypa/cibuildwheel@v3.1.4
         with:
           output-dir: wheelhouse
-        # If you want CI to enforce the version range regardless of metadata, uncomment:
-        # env:
-        #   CIBW_PROJECT_REQUIRES_PYTHON: ">=3.11"
+        env:
+          CIBW_SKIP: "*-win32"  # Skip Windows 32-bit builds
+          CIBW_TEST_REQUIRES: "pytest"
+          CIBW_TEST_COMMAND: "pytest -q {project}/tests"
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
@@ -63,8 +64,16 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download wheel artifacts
+        uses: actions/download-artifact@v4
         with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+      - name: Download sdist
+        uses: actions/download-artifact@v4
+        with:
+          name: sdist
           path: dist
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
