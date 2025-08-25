@@ -1,110 +1,57 @@
-# =============================================================================
-# GitHub Actions Workflow: Test Deploy (Manual/Development)
-# =============================================================================
-
 name: test_deploy
 
 on:
-    workflow_run:
-      workflows: ["build"]
-      types:
-        - completed
-    workflow_dispatch:
-      inputs:
-        simulate_deploy:
-          description: 'Run deployment simulation'
-          required: false
-          default: true
-          type: boolean
+  # Auto: run when the "build" workflow finishes (on any branch)
+  workflow_run:
+    workflows: ["build"]
+    types: [completed]
+    branches: ["**"]
+  # Manual: optional
+  workflow_dispatch:
+    inputs:
+      simulate_deploy:
+        description: "Run deployment simulation"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
-  # ========================================================================
-  # Wait for build workflow to complete successfully
-  # ========================================================================
-  wait_for_build:
-    name: Wait for build workflow
-    runs-on: ubuntu-latest
-    outputs:
-      build_run_id: ${{ steps.get-build.outputs.run_id }}
-    steps:
-      - name: Get build workflow run ID
-        id: get-build
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Get the most recent successful build workflow run for this commit
-          BUILD_RUN=$(gh api repos/${{ github.repository }}/actions/runs \
-            --jq '.workflow_runs[] | select(.name == "build" and .head_sha == "${{ github.sha }}" and .conclusion == "success") | .id' \
-            --paginate | head -1)
-          
-          if [ -z "$BUILD_RUN" ]; then
-            echo "No successful build workflow found for commit ${{ github.sha }}"
-            echo "Please ensure the build workflow has completed successfully first."
-            exit 1
-          fi
-          
-          echo "run_id=$BUILD_RUN" >> $GITHUB_OUTPUT
-          echo "Found successful build workflow run: $BUILD_RUN"
-
-  # ========================================================================
-  # Simulate deployment process (without actually publishing)
-  # ========================================================================
   simulate_deploy:
-    name: Simulate deployment process
-    needs: [wait_for_build]
-    if: ${{ github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.simulate_deploy) }}
+    # For auto runs: proceed only if the build concluded successfully
+    # For manual runs: obey the input
+    if: >
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && inputs.simulate_deploy)
     runs-on: ubuntu-latest
     steps:
       - name: Download all distributions from build workflow
         uses: actions/download-artifact@v4
         with:
+          # must match the artifact name your build uploads
           name: all-distributions
           path: dist
+          # for workflow_run, this is the finished build’s run id
+          run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ needs.wait_for_build.outputs.build_run_id }}
 
       - name: Verify artifacts for deployment
         run: |
           echo "=== DEPLOYMENT SIMULATION ==="
-          echo "Verifying all artifacts are present and valid..."
-          
-          # Check wheels
-          echo "Wheels found:"
-          ls -la dist/*.whl || echo "No wheels found"
-          
-          # Check source distributions
-          echo "Source distributions found:"
-          ls -la dist/*.tar.gz || echo "No source distributions found"
-          
-          # Count total artifacts
-          WHEEL_COUNT=$(ls dist/*.whl 2>/dev/null | wc -l || echo "0")
-          SDIST_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l || echo "0")
-          
+          echo "Wheels:" && ls -la dist/*.whl || echo "No wheels found"
+          echo "Sdists:" && ls -la dist/*.tar.gz || echo "No sdists found"
+
+          WHEEL_COUNT=$(ls dist/*.whl 2>/dev/null | wc -l || echo 0)
+          SDIST_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l || echo 0)
           echo "Total wheels: $WHEEL_COUNT"
-          echo "Total source distributions: $SDIST_COUNT"
-          
-          # Validate wheel files
-          echo "Validating wheel files..."
-          for wheel in dist/*.whl; do
-            if [ -f "$wheel" ]; then
-              echo "✓ Valid wheel: $(basename "$wheel")"
-            fi
-          done
-          
-          # Validate source distribution
-          echo "Validating source distribution..."
-          for sdist in dist/*.tar.gz; do
-            if [ -f "$sdist" ]; then
-              echo "✓ Valid source distribution: $(basename "$sdist")"
-            fi
-          done
-          
-          echo "=== DEPLOYMENT SIMULATION COMPLETE ==="
-          echo "All artifacts verified successfully!"
-          echo "In a real deployment, these would be uploaded to PyPI."
+          echo "Total sdists: $SDIST_COUNT"
+
+          for wheel in dist/*.whl 2>/dev/null; do [[ -f "$wheel" ]] && echo "✓ $(basename "$wheel")"; done
+          for sdist in dist/*.tar.gz 2>/dev/null; do [[ -f "$sdist" ]] && echo "✓ $(basename "$sdist")"; done
+
+          echo "=== SIMULATION COMPLETE ==="
 
       - name: Upload deployment simulation results
         uses: actions/upload-artifact@v4
