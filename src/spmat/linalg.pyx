@@ -4,11 +4,14 @@ cimport cython
 cimport scipy.linalg.cython_blas as blas
 cimport scipy.linalg.cython_lapack as lapack
 
+# Use pointer-width integers for cross-platform size/index buffers
+ctypedef cnp.intp_t idx_t
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
-    cdef int dim_row = max(n_view)
+def block_lsvd(double[:, ::1] a_view, idx_t[::1] n_view, idx_t[::1] k_view):
+    cdef int dim_row = <int>max(n_view)
     cdef int dim_col = a_view.shape[1]
     cdef int dim_max = max(dim_row, dim_col)
     cdef int dim_min = min(dim_row, dim_col)
@@ -17,6 +20,7 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
     cdef int ind_u = 0
     cdef int ind_s = 0
     cdef int info
+    cdef idx_t i
 
     u = np.empty(np.array(n_view).dot(np.array(k_view)), dtype=np.float64)
     s = np.empty(np.array(k_view).sum(), dtype=np.float64)
@@ -27,8 +31,8 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
 
 
     for i in range(n_view.size):
-        dim_row = n_view[i]
-        dim_min = k_view[i]
+        dim_row = <int>n_view[i]
+        dim_min = <int>k_view[i]
 
         lapack.dgesvd("N", "S",
                       &dim_col, &dim_row,
@@ -50,8 +54,8 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
 def block_mvdot(double[::1] u_view,
                 double[::1] v_view,
                 double[::1] x_view,
-                long[::1] n_view,
-                long[::1] k_view):
+                idx_t[::1] n_view,
+                idx_t[::1] k_view):
     cdef int dim_row
     cdef int dim_col
     cdef int one_int = 1
@@ -62,7 +66,7 @@ def block_mvdot(double[::1] u_view,
     y = np.empty(np.array(n_view).sum(), dtype=np.float64)
     cdef double[::1] y_view = y
     cdef double[::1] t_view = t
-    cdef int i
+    cdef idx_t i
     cdef int ind_x = 0
     cdef int ind_y = 0
     cdef int ind_t = 0
@@ -70,8 +74,8 @@ def block_mvdot(double[::1] u_view,
 
     # compute t = u.T @ x
     for i in range(n_view.size):
-        dim_row = n_view[i]
-        dim_col = k_view[i]
+        dim_row = <int>n_view[i]
+        dim_col = <int>k_view[i]
 
         blas.dgemv("N",
                    &dim_col, &dim_row, &one_double,
@@ -91,8 +95,8 @@ def block_mvdot(double[::1] u_view,
     ind_t = 0
     ind_u = 0
     for i in range(n_view.size):
-        dim_row = n_view[i]
-        dim_col = k_view[i]
+        dim_row = <int>n_view[i]
+        dim_col = <int>k_view[i]
 
         blas.dgemv("T",
                    &dim_col, &dim_row, &one_double,
@@ -116,8 +120,8 @@ def block_mvdot(double[::1] u_view,
 def block_mmdot(double[::1] u_view,
                 double[::1] v_view,
                 double[:, ::1] x_view,
-                long[::1] n_view,
-                long[::1] k_view):
+                idx_t[::1] n_view,
+                idx_t[::1] k_view):
     cdef int dim_row
     cdef int dim_col
     cdef int num_col = x_view.shape[1]
@@ -128,7 +132,7 @@ def block_mmdot(double[::1] u_view,
     y = np.empty((np.array(n_view).sum(), num_col), dtype=np.float64)
     cdef double[:, ::1] y_view = y
     cdef double[:, ::1] t_view = t
-    cdef int i, j
+    cdef idx_t i, j
     cdef int ind_x = 0
     cdef int ind_y = 0
     cdef int ind_t = 0
@@ -136,14 +140,14 @@ def block_mmdot(double[::1] u_view,
 
     # compute t = u.T @ x
     for i in range(n_view.size):
-        dim_row = n_view[i]
-        dim_col = k_view[i]
-        
-        blas.dgemm("N", "T",
-                   &num_col, &dim_col, &dim_row, &one_double,
-                   &x_view[ind_x][0], &num_col,
-                   &u_view[ind_u], &dim_col, &zero_double,
-                   &t_view[ind_t][0], &num_col)
+        dim_row = <int>n_view[i]
+        dim_col = <int>k_view[i]
+
+        blas.dgemm("T", "N",
+                   &dim_col, &num_col, &dim_row, &one_double,
+                   &u_view[ind_u], &dim_row,
+                   &x_view[ind_x, 0], &num_col, &zero_double,
+                   &t_view[ind_t, 0], &num_col)
 
         ind_x += dim_row
         ind_t += dim_col
@@ -155,26 +159,21 @@ def block_mmdot(double[::1] u_view,
             t_view[i, j] *= v_view[i]
 
     # compute y = u @ t
-    ind_u = 0
     ind_t = 0
+    ind_u = 0
     for i in range(n_view.size):
-        dim_row = n_view[i]
-        dim_col = k_view[i]
+        dim_row = <int>n_view[i]
+        dim_col = <int>k_view[i]
 
         blas.dgemm("N", "N",
-                   &num_col, &dim_row, &dim_col, &one_double,
-                   &t_view[ind_t][0], &num_col,
-                   &u_view[ind_u], &dim_col, &zero_double,
-                   &y_view[ind_y][0], &num_col)
+                   &dim_row, &num_col, &dim_col, &one_double,
+                   &u_view[ind_u], &dim_row,
+                   &t_view[ind_t, 0], &num_col, &zero_double,
+                   &y_view[ind_y, 0], &num_col)
 
         ind_y += dim_row
         ind_t += dim_col
         ind_u += dim_row*dim_col
-
-    # compute y = y + x
-    for i in range(y_view.shape[0]):
-        for j in range(y_view.shape[1]):
-            y_view[i, j] += x_view[i, j]
 
     return y
 
@@ -183,8 +182,8 @@ def block_mmdot(double[::1] u_view,
 @cython.wraparound(False)
 def block_rowsum(double[::1] u_view,
                  double[::1] v_view,
-                 long[::1] n_view,
-                 long[::1] k_view):
+                 idx_t[::1] n_view,
+                 idx_t[::1] k_view):
     cdef int dim_row
     cdef int dim_col
     cdef int one_int = 1
@@ -193,15 +192,15 @@ def block_rowsum(double[::1] u_view,
 
     y = np.empty(np.array(n_view).sum(), dtype=np.float64)
     cdef double[::1] y_view = y
-    cdef int i
+    cdef idx_t i
     cdef int ind_u = 0
     cdef int ind_v = 0
     cdef int ind_y = 0
 
     # compute y = u @ v
     for i in range(n_view.size):
-        dim_row = n_view[i]
-        dim_col = k_view[i]
+        dim_row = <int>n_view[i]
+        dim_col = <int>k_view[i]
 
         blas.dgemv("T",
                    &dim_col, &dim_row, &one_double,

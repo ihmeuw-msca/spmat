@@ -42,11 +42,11 @@ jobs:
         with:
           output-dir: wheelhouse
         env:
-          # Skip Windows 32-bit
+          # Skip Windows 32-bit builds
           CIBW_SKIP: "*-win32"
 
           CIBW_TEST_REQUIRES: "pytest"
-          CIBW_TEST_COMMAND: "pytest -q {project}/tests"
+          CIBW_TEST_COMMAND: "python -m pytest -v tests"
           CIBW_BEFORE_BUILD: "pip install --upgrade pip setuptools wheel"
 
       - name: Upload wheel artifacts
