@@ -1,47 +1,33 @@
 name: test_deploy
 
 on:
-  # Auto: run when the "build" workflow finishes (on any branch)
-  workflow_run:
-    workflows: ["build"]
-    types: [completed]
-    branches: ["**"]
-  # Manual: optional
-  workflow_dispatch:
+  workflow_call:
     inputs:
       simulate_deploy:
-        description: "Run deployment simulation"
         type: boolean
         default: true
+        required: false
 
 permissions:
   contents: read
 
 jobs:
   simulate_deploy:
-    # For auto runs: proceed only if the build concluded successfully
-    # For manual runs: obey the input
-    if: >
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success') ||
-      (github.event_name == 'workflow_dispatch' && inputs.simulate_deploy)
+    if: ${{ inputs.simulate_deploy }}
     runs-on: ubuntu-latest
     steps:
-      - name: Download all distributions from build workflow
+      - name: Download merged dist artifact from this run
         uses: actions/download-artifact@v4
         with:
-          # must match the artifact name your build uploads
           name: all-distributions
           path: dist
-          # for workflow_run, this is the finished build’s run id
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify artifacts for deployment
         run: |
+          set -euo pipefail
           echo "=== DEPLOYMENT SIMULATION ==="
-          echo "Wheels:" && ls -la dist/*.whl || echo "No wheels found"
-          echo "Sdists:" && ls -la dist/*.tar.gz || echo "No sdists found"
+          echo "Wheels:" && (ls -la dist/*.whl || echo "No wheels found")
+          echo "Sdists:" && (ls -la dist/*.tar.gz || echo "No sdists found")
 
           WHEEL_COUNT=$(ls dist/*.whl 2>/dev/null | wc -l || echo 0)
           SDIST_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l || echo 0)

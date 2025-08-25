@@ -54,7 +54,6 @@ jobs:
         with:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
-          retention-days: 30
 
   # ========================================================================
   # Build source distribution (sdist)
@@ -82,7 +81,6 @@ jobs:
         with:
           name: sdist
           path: dist/*.tar.gz
-          retention-days: 30
 
   # ========================================================================
   # Collect all artifacts for potential deployment
@@ -116,4 +114,3 @@ jobs:
         with:
           name: all-distributions
           path: dist/*
-          retention-days: 30
