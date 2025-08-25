@@ -24,6 +24,7 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
     cdef double[::1] u_view = u
     cdef double[::1] s_view = s
     cdef double[::1] w_view = w
+    cdef int i
 
 
     for i in range(n_view.size):

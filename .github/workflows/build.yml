@@ -1,3 +1,4 @@
+# Move build logic in deploy here and have deploy use this
 name: python-build
 on: [push]
 jobs:
