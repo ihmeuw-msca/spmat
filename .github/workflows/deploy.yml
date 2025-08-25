@@ -1,7 +1,3 @@
-# =============================================================================
-# GitHub Actions Workflow: Deploy to PyPI
-# =============================================================================
-
 name: deploy
 
 on:
@@ -13,57 +9,81 @@ permissions:
   contents: write
 
 jobs:
-  # ========================================================================
-  # Wait for build workflow to complete successfully
-  # ========================================================================
   wait_for_build:
-    name: Wait for build workflow
     runs-on: ubuntu-latest
     outputs:
       build_run_id: ${{ steps.get-build.outputs.run_id }}
     steps:
-      - name: Get build workflow run ID
-        id: get-build
+      - name: Checkout (shallow)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Ensure tag commit is on main
         run: |
-          # Get the most recent successful build workflow run for this commit
-          BUILD_RUN=$(gh api repos/${{ github.repository }}/actions/runs \
-            --jq '.workflow_runs[] | select(.name == "build" and .head_sha == "${{ github.sha }}" and .conclusion == "success") | .id' \
-            --paginate | head -1)
-          
-          if [ -z "$BUILD_RUN" ]; then
-            echo "No successful build workflow found for commit ${{ github.sha }}"
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "Tag ${GITHUB_REF_NAME} does not point to a commit on 'main'."
             exit 1
           fi
-          
-          echo "run_id=$BUILD_RUN" >> $GITHUB_OUTPUT
-          echo "Found successful build workflow run: $BUILD_RUN"
+          echo "Tag commit is on 'main'."
 
-  # ========================================================================
-  # Download built artifacts and publish to PyPI
-  # ========================================================================
+      - name: Find (and wait for) successful build for this commit
+        id: get-build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          TARGET_SHA="${GITHUB_SHA}"
+          echo "Looking for successful 'build' run for SHA: $TARGET_SHA"
+
+          # Poll up to ~10 minutes (20 * 30s)
+          for i in $(seq 1 20); do
+            RUN_ID=$(gh api repos/${{ github.repository }}/actions/runs \
+              --paginate \
+              --jq '.workflow_runs[]
+                    | select(.name=="build" and .head_sha=="'"$TARGET_SHA"'" and .conclusion=="success")
+                    | .id' | head -1 || true)
+
+            if [ -n "$RUN_ID" ]; then
+              echo "Found successful build run: $RUN_ID"
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            echo "No successful build yet for $TARGET_SHA (attempt $i). Sleeping 30s…"
+            sleep 30
+          done
+
+          echo "Timed out waiting for a successful 'build' run for $TARGET_SHA"
+          exit 1
+
   upload_pypi:
     name: Publish to PyPI
-    needs: [wait_for_build]
+    needs: wait_for_build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all distributions from build workflow
+      - name: Download all distributions from build
         uses: actions/download-artifact@v4
         with:
-          name: all-distributions
+          name: all-distributions                # must match artifact name in build.yml
           path: dist
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ needs.wait_for_build.outputs.build_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify artifacts
         run: |
-          echo "Wheels found:" && ls -la dist/*.whl || true
-          echo "Source dists found:" && ls -la dist/*.tar.gz || true
-          echo "Total artifacts:" && ls -la dist/
+          set -euo pipefail
+          echo "Artifacts:"
+          ls -la dist || true
+          test -n "$(ls dist/*.whl 2>/dev/null || true)" || { echo "No wheels found"; exit 1; }
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          skip-existing: true
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
           verbose: true
