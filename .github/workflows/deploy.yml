@@ -14,129 +14,51 @@ permissions:
 
 jobs:
   # ========================================================================
-  # Build wheels (Linux, Windows, macOS universal2 built on Intel)
+  # Wait for build workflow to complete successfully
   # ========================================================================
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
-
-    steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Build wheels with cibuildwheel
-        uses: pypa/cibuildwheel@v3.1.4
-        with:
-          output-dir: wheelhouse
-        env:
-          # Skip Windows 32-bit
-          CIBW_SKIP: "*-win32"
-
-          CIBW_TEST_REQUIRES: "pytest"
-          CIBW_TEST_COMMAND: "pytest -q {project}/tests"
-          CIBW_BEFORE_BUILD: "pip install --upgrade pip setuptools wheel"
-
-      - name: Upload wheel artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: wheels-${{ matrix.os }}
-          path: wheelhouse/*.whl
-
-  # ========================================================================
-  # Build source distribution (sdist)
-  # ========================================================================
-  build_sdist:
-    name: Build source distribution
+  wait_for_build:
+    name: Wait for build workflow
     runs-on: ubuntu-latest
+    outputs:
+      build_run_id: ${{ steps.get-build.outputs.run_id }}
     steps:
-      - name: Checkout source code
-        uses: actions/checkout@v4
-
-      - name: Set up Python environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Build source distribution
+      - name: Get build workflow run ID
+        id: get-build
         run: |
-          python -m pip install --upgrade pip build
-          python -m build --sdist
-          ls -la dist/
-
-      - name: Upload source distribution artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sdist
-          path: dist/*.tar.gz
-
-  # ========================================================================
-  # Test macOS universal2 wheel on Apple Silicon (arm64)
-  # ========================================================================
-  test_macos_arm:
-    name: Test macOS universal2 wheel on Apple Silicon
-    needs: [build_wheels]
-    runs-on: macos-latest   # Apple Silicon runner
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all wheel artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          pattern: wheels-*
-          merge-multiple: true
-
-      - name: Set up Python environment
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install universal2 wheel and run tests (arm64 native)
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Available wheels:"
-          ls -la dist/*.whl
-          # Install only the macOS universal2 wheel
-          pip install dist/*macosx_*_universal2.whl
-          pytest -q tests
+          # Get the most recent successful build workflow run for this commit
+          BUILD_RUN=$(gh api repos/${{ github.repository }}/actions/runs \
+            --jq '.workflow_runs[] | select(.name == "build" and .head_sha == "${{ github.sha }}" and .conclusion == "success") | .id' \
+            --paginate | head -1)
+          
+          if [ -z "$BUILD_RUN" ]; then
+            echo "No successful build workflow found for commit ${{ github.sha }}"
+            exit 1
+          fi
+          
+          echo "run_id=$BUILD_RUN" >> $GITHUB_OUTPUT
+          echo "Found successful build workflow run: $BUILD_RUN"
 
   # ========================================================================
-  # Publish to PyPI (only after all builds + macOS arm64 test succeed)
+  # Download built artifacts and publish to PyPI
   # ========================================================================
   upload_pypi:
     name: Publish to PyPI
-    needs: [build_wheels, build_sdist, test_macos_arm]
+    needs: [wait_for_build]
     runs-on: ubuntu-latest
     steps:
-      - name: Download wheel artifacts
+      - name: Download all distributions from build workflow
         uses: actions/download-artifact@v4
         with:
+          name: all-distributions
           path: dist
-          pattern: wheels-*
-          merge-multiple: true
-
-      - name: Download source distribution
-        uses: actions/download-artifact@v4
-        with:
-          name: sdist
-          path: dist
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ needs.wait_for_build.outputs.build_run_id }}
 
       - name: Verify artifacts
         run: |
           echo "Wheels found:" && ls -la dist/*.whl || true
           echo "Source dists found:" && ls -la dist/*.tar.gz || true
+          echo "Total artifacts:" && ls -la dist/
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
