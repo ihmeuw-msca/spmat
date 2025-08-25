@@ -9,6 +9,13 @@ on:
       workflows: ["build"]
       types:
         - completed
+    workflow_dispatch:
+      inputs:
+        simulate_deploy:
+          description: 'Run deployment simulation'
+          required: false
+          default: true
+          type: boolean
 
 permissions:
   contents: read
@@ -48,7 +55,7 @@ jobs:
   simulate_deploy:
     name: Simulate deployment process
     needs: [wait_for_build]
-    if: ${{ inputs.simulate_deploy != false }}
+    if: ${{ github.event_name == 'workflow_run' || (github.event_name == 'workflow_dispatch' && inputs.simulate_deploy) }}
     runs-on: ubuntu-latest
     steps:
       - name: Download all distributions from build workflow
