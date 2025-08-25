@@ -137,8 +137,8 @@ class BILMat:
 
     def __init__(self, lmats: Iterable, dsizes: Iterable):
         self.lmats = np.ascontiguousarray(lmats)
-        self.dsizes = np.asarray(dsizes).astype(int)
-        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+        self.dsizes = np.asarray(dsizes).astype(np.int32)
+        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1]).astype(np.int32)
         self.dsize = self.dsizes.sum()
 
         if self.dsizes.sum() != self.lmats.shape[0]:
