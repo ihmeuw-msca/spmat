@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A collection of tools for special matrices"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "BSD-2-Clause" }
+license = "BSD-2-Clause"
 authors = [
     { name = "Peng Zheng", email = "zhengp@uw.edu" },
 ]
@@ -17,7 +17,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "License :: OSI Approved :: BSD License",
     "Natural Language :: English",
     "Topic :: Scientific/Engineering :: Mathematics",
 ]

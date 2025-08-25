@@ -48,7 +48,7 @@ setup(
     description=project["description"],
     long_description=long_description,
     long_description_content_type="text/markdown",
-    license=project["license"]["text"],
+    license=project["license"],
     url=project["urls"]["Homepage"],
     author=project["authors"][0]["name"],
     author_email=project["authors"][0]["email"],
@@ -56,7 +56,6 @@ setup(
     packages=find_packages(where="src"),
     include_package_data=True,
     install_requires=install_requirements,
-    tests_require=test_requirements,
     extras_require={
         "docs": doc_requirements,
         "test": test_requirements,

@@ -86,6 +86,8 @@ jobs:
           ls -la dist/*.whl || true
           # Install the wheel matching the current Python version (3.12)
           pip install dist/*cp312*macosx_*_universal2.whl
+          # Install pytest for testing
+          pip install pytest
           pytest -q tests
 
   build_sdist:
