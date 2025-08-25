@@ -1,12 +1,12 @@
 """
 Utility functions
 """
+
 from typing import Iterable, Tuple, List
 import numpy as np
 
 
-def to_numpy(array: Iterable,
-             ndim: Tuple[int] = None) -> np.ndarray:
+def to_numpy(array: Iterable, ndim: Tuple[int] = None) -> np.ndarray:
     if not isinstance(array, np.ndarray):
         array = np.asarray(array)
 
@@ -17,9 +17,7 @@ def to_numpy(array: Iterable,
     return array
 
 
-def split(array: Iterable,
-          sizes: Iterable[int],
-          axis: int = 0) -> List[np.ndarray]:
+def split(array: Iterable, sizes: Iterable[int], axis: int = 0) -> List[np.ndarray]:
     array = to_numpy(array)
     if array.shape[axis] != sum(sizes):
         raise ValueError("`array` not match `sizes`.")

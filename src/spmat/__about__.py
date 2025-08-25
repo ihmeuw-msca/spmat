@@ -13,7 +13,7 @@ __title__ = "spmat"
 __summary__ = "spmat: A collection of tools for special matrices"
 __uri__ = "https://github.com/zhengp0/spmat"
 
-__version__ = "0.0.11"
+__version__ = "0.1.0"
 
 __author__ = "Peng Zheng"
 __email__ = "zhengp@uw.edu"
