@@ -46,7 +46,7 @@ jobs:
           CIBW_SKIP: "*-win32"
 
           CIBW_TEST_REQUIRES: "pytest"
-          CIBW_TEST_COMMAND: "python -c 'import spmat; print(spmat.__file__)' && python -m pytest -v tests"
+          CIBW_TEST_COMMAND: "pytest -v {project}/tests"
           CIBW_BEFORE_BUILD: "pip install --upgrade pip setuptools wheel"
 
       - name: Upload wheel artifacts
