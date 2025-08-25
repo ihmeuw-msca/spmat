@@ -1,3 +1,14 @@
 [build-system]
 requires = ["setuptools", "wheel", "numpy", "scipy", "Cython<=3.0.3"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "spmat"
+version = "0.1.0"
+description = "Sparse matrix utilities"
+readme = "README.rst"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "scipy",
+]

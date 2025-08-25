@@ -33,6 +33,7 @@ if __name__ == "__main__":
         url=about.__uri__,
         author=about.__author__,
         author_email=about.__email__,
+        python_requires=">=3.10",
         package_dir={"": "src"},
         packages=find_packages(where="src"),
         include_package_data=True,
