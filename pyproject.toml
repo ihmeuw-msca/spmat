@@ -8,7 +8,21 @@ version = "0.1.0"
 description = "Sparse matrix utilities"
 readme = "README.rst"
 requires-python = ">=3.10"
+license = {text = "BSD 2-Clause License"}
+authors = [
+    {name = "Peng Zheng", email = "zhengp@uw.edu"}
+]
 dependencies = [
     "numpy",
     "scipy",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+]
+dev = [
+    "pytest",
+    "pytest-mock",
 ]
