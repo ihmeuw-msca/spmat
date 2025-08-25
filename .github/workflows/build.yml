@@ -14,56 +14,40 @@ permissions:
   contents: read
 
 jobs:
+  # ========================================================================
+  # Build wheels (Linux, Windows, macOS)
+  # ========================================================================
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Linux x86_64
-          - os: ubuntu-latest
-            cibw_archs: "x86_64"
-          # Linux ARM64
-          - os: ubuntu-24.04-arm
-            cibw_archs: "aarch64"
-          # Windows x86_64
-          - os: windows-latest
-            cibw_archs_windows: "AMD64"
-          # Windows ARM64 (only build py312/py313 here)
-          - os: windows-11-arm
-            cibw_archs_windows: "ARM64"
-            cibw_build: "cp312-win_arm64 cp313-win_arm64"
-            cibw_env_windows: "PIP_PREFER_BINARY=1 PIP_ONLY_BINARY=numpy,scipy"
-          # macOS Intel
-          - os: macos-13
-          # macOS Apple Silicon
-          - os: macos-latest
+        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-13, macos-latest]
 
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+      - name: Checkout source code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+      - name: Set up Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Build wheels with cibuildwheel
         uses: pypa/cibuildwheel@v3.1.4
         with:
           output-dir: wheelhouse
         env:
-          # Per-OS arch/build selectors (empty ones are ignored)
-          CIBW_ARCHS: ${{ matrix.cibw_archs }}
-          CIBW_ARCHS_WINDOWS: ${{ matrix.cibw_archs_windows }}
-          CIBW_BUILD: ${{ matrix.cibw_build }}
-          # Only needed on Windows ARM to force binaries for numpy/scipy
-          CIBW_ENVIRONMENT_WINDOWS: ${{ matrix.cibw_env_windows }}
-          # Global settings
+          # Skip Windows 32-bit builds
           CIBW_SKIP: "*-win32"
+
           CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "pytest -v {project}/tests"
           CIBW_BEFORE_BUILD: "pip install --upgrade pip setuptools wheel"
-
 
       - name: Upload wheel artifacts
         uses: actions/upload-artifact@v4
