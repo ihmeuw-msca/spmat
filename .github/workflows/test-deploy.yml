@@ -84,7 +84,8 @@ jobs:
           set -euo pipefail
           echo "Available wheels:"
           ls -la dist/*.whl || true
-          pip install dist/*macosx_*_universal2.whl
+          # Install the wheel matching the current Python version (3.12)
+          pip install dist/*cp312*macosx_*_universal2.whl
           pytest -q tests
 
   build_sdist:
