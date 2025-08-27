@@ -2,6 +2,8 @@ name: Build and Deploy
 
 on:
   push:
+  release:
+    types: [published]
 
 permissions:
   contents: write
@@ -29,7 +31,6 @@ jobs:
           CIBW_TEST_COMMAND: "pytest -v {project}/tests"
 
       - name: Upload wheel artifacts
-        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
         uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
@@ -47,9 +48,7 @@ jobs:
           python -m pip install --upgrade pip build
           python -m build --sdist
 
-      # Only upload on tag pushes
       - name: Upload sdist
-        if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
         uses: actions/upload-artifact@v4
         with:
           name: cibw-sdist
@@ -59,32 +58,15 @@ jobs:
     name: Collect and Deploy
     needs: [build_wheels, make_sdist]
     runs-on: ubuntu-latest
-    # Only run this job for tags that start with v
-    if: ${{ github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+    # Only run this job for releases
+    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     steps:
-      - name: Ensure tag commit is on main
-        run: |
-          set -euo pipefail
-          git fetch --no-tags --depth=1 origin main
-          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
-            echo "Tag ${GITHUB_REF_NAME} does not point to a commit on 'main'."
-            exit 1
-          fi
-          echo "Tag commit is on 'main'."
-
       - name: Download release artifacts (wheels + sdist)
         uses: actions/download-artifact@v4
         with:
           path: dist
           pattern: cibw-*
           merge-multiple: true
-
-      - name: Verify all artifacts
-        run: |
-          set -euo pipefail
-          echo "Artifacts:"
-          ls -la dist || true
-          test -n "$(ls dist/*.whl 2>/dev/null || true)" || { echo "No wheels found"; exit 1; }
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

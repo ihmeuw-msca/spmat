@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import block_diag
 
-from . import linalg, utils
+from spmat import linalg, utils
 
 
 class ILMat:
