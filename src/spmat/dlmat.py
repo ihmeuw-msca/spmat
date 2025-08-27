@@ -1,6 +1,7 @@
 """
 Sum of diagonal and low rank matrices
 """
+
 from typing import Iterable, List
 
 import numpy as np
@@ -137,8 +138,8 @@ class BILMat:
 
     def __init__(self, lmats: Iterable, dsizes: Iterable):
         self.lmats = np.ascontiguousarray(lmats)
-        self.dsizes = np.asarray(dsizes).astype(int)
-        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+        self.dsizes = np.asarray(dsizes, dtype=np.int64)
+        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1]).astype(np.int64)
         self.dsize = self.dsizes.sum()
 
         if self.dsizes.sum() != self.lmats.shape[0]:
@@ -187,9 +188,7 @@ class BILMat:
         return 1.0 + (self.lmats**2).sum(axis=1)
 
     def invdiag(self) -> NDArray:
-        return 1.0 + linalg.block_rowsum(
-            self._u**2, self._w, self.dsizes, self.lranks
-        )
+        return 1.0 + linalg.block_rowsum(self._u**2, self._w, self.dsizes, self.lranks)
 
     def __repr__(self) -> str:
         return f"BILMat(dsize={self.dsize}, num_blocks={self.dsizes.size})"
@@ -370,8 +369,8 @@ class BDLMat:
     def __init__(self, dvecs: Iterable, lmats: Iterable, dsizes: Iterable):
         self.dvecs = np.ascontiguousarray(dvecs)
         self.lmats = np.ascontiguousarray(lmats)
-        self.dsizes = np.ascontiguousarray(dsizes)
-        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1])
+        self.dsizes = np.ascontiguousarray(dsizes, dtype=np.int64)
+        self.lranks = np.minimum(self.dsizes, self.lmats.shape[1]).astype(np.int64)
         self.sdvecs = np.sqrt(self.dvecs)
 
         self.bilmat = BILMat(self.lmats / self.sdvecs[:, np.newaxis], self.dsizes)

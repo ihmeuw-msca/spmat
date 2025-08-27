@@ -33,11 +33,11 @@ if __name__ == "__main__":
         url=about.__uri__,
         author=about.__author__,
         author_email=about.__email__,
+        python_requires=">=3.10,<3.14",
         package_dir={"": "src"},
         packages=find_packages(where="src"),
         include_package_data=True,
         install_requires=install_requirements,
-        tests_require=test_requirements,
         extras_require={
             "docs": doc_requirements,
             "test": test_requirements,

@@ -7,7 +7,7 @@ cimport scipy.linalg.cython_lapack as lapack
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
+def block_lsvd(double[:, ::1] a_view, long long[::1] n_view, long long[::1] k_view):
     cdef int dim_row = max(n_view)
     cdef int dim_col = a_view.shape[1]
     cdef int dim_max = max(dim_row, dim_col)
@@ -50,8 +50,8 @@ def block_lsvd(double[:, ::1] a_view, long[::1] n_view, long[::1] k_view):
 def block_mvdot(double[::1] u_view,
                 double[::1] v_view,
                 double[::1] x_view,
-                long[::1] n_view,
-                long[::1] k_view):
+                long long[::1] n_view,
+                long long[::1] k_view):
     cdef int dim_row
     cdef int dim_col
     cdef int one_int = 1
@@ -116,8 +116,8 @@ def block_mvdot(double[::1] u_view,
 def block_mmdot(double[::1] u_view,
                 double[::1] v_view,
                 double[:, ::1] x_view,
-                long[::1] n_view,
-                long[::1] k_view):
+                long long[::1] n_view,
+                long long[::1] k_view):
     cdef int dim_row
     cdef int dim_col
     cdef int num_col = x_view.shape[1]
@@ -183,8 +183,8 @@ def block_mmdot(double[::1] u_view,
 @cython.wraparound(False)
 def block_rowsum(double[::1] u_view,
                  double[::1] v_view,
-                 long[::1] n_view,
-                 long[::1] k_view):
+                 long long[::1] n_view,
+                 long long[::1] k_view):
     cdef int dim_row
     cdef int dim_col
     cdef int one_int = 1
