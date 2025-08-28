@@ -1,8 +1,9 @@
 # Special Matrices (spmat)
 
-[![Build](https://img.shields.io/github/actions/workflow/status/ihmeuw-msca/spmat/build.yml?branch=main&label=Build&color=purple)](https://github.com/ihmeuw-msca/spmat/actions)
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/spmat?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=MAGENTA&left_text=Downloads)](https://pepy.tech/projects/spmat)
 [![PyPI](https://img.shields.io/pypi/v/spmat?color=purple)](https://pypi.org/project/spmat/)
+![Python](https://img.shields.io/badge/python-3.10,_3.11,_3.12,_3.13-purple.svg)
+[![Build](https://img.shields.io/github/actions/workflow/status/ihmeuw-msca/spmat/build.yml?branch=refactor/doc-cleanup&label=Build&color=purple)](https://github.com/ihmeuw-msca/spmat/actions)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/spmat?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=MAGENTA&left_text=Downloads)](https://pepy.tech/projects/spmat)
 
 A collection of tools for special matrices with optimized implementations for scientific computing.
 
