@@ -1,3 +1,42 @@
 [build-system]
-requires = ["setuptools", "wheel", "numpy", "scipy", "Cython"]
+requires = ["setuptools", "Cython>3.0", "numpy", "scipy"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "spmat"
+version = "0.1.0"
+description = "spmat: A collection of tools for special matrices"
+readme = "README.md" 
+requires-python = ">=3.10,<3.14"
+license = "BSD-2-Clause"
+
+authors = [
+  { name = "IHME Math Sciences", email = "ihme.math.sciences@gmail.com" },
+]
+
+classifiers = [
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+keywords = ["matrices", "linear-algebra", "sparse-matrices"]
+
+dependencies = [
+  "numpy",
+  "scipy",
+]
+
+[project.optional-dependencies]
+dev  = ["pytest"]
+
+[project.urls]
+Homepage     = "https://github.com/ihmeuw-msca/spmat"
+Repository   = "https://github.com/ihmeuw-msca/spmat"
+Documentation = "https://github.com/ihmeuw-msca/spmat"
