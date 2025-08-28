@@ -40,9 +40,3 @@ dev  = ["pytest"]
 Homepage     = "https://github.com/ihmeuw-msca/spmat"
 Repository   = "https://github.com/ihmeuw-msca/spmat"
 Documentation = "https://github.com/ihmeuw-msca/spmat"
-
-[tool.setuptools]
-package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-where = ["src"]
