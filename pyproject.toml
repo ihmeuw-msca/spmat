@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "Cython", "numpy", "scipy"]
+requires = ["setuptools", "Cython>3.0", "numpy", "scipy"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -34,8 +34,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-mock"]
-dev  = ["pytest", "pytest-mock"]
+dev  = ["pytest"]
 
 [project.urls]
 Homepage     = "https://github.com/ihmeuw-msca/spmat"
@@ -44,11 +43,6 @@ Documentation = "https://github.com/ihmeuw-msca/spmat"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
-include-package-data = true
-zip-safe = false
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.cython]
-language_level = 3
