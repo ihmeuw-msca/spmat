@@ -2,12 +2,13 @@
 Utility functions
 """
 
-from collections.abc import Iterable
+from collections.abc import Sequence
 
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
 
 
-def to_numpy(array: Iterable, ndim: tuple[int, ...] | None = None) -> np.ndarray:
+def to_numpy(array: ArrayLike, ndim: tuple[int, ...] | None = None) -> NDArray:
     if not isinstance(array, np.ndarray):
         array = np.asarray(array)
 
@@ -18,14 +19,14 @@ def to_numpy(array: Iterable, ndim: tuple[int, ...] | None = None) -> np.ndarray
     return array
 
 
-def split(array: Iterable, sizes: Iterable[int], axis: int = 0) -> list[np.ndarray]:
+def split(array: ArrayLike, sizes: Sequence[int], axis: int = 0) -> list[NDArray]:
     array = to_numpy(array)
     if array.shape[axis] != sum(sizes):
         raise ValueError("`array` not match `sizes`.")
     return np.split(array, np.cumsum(sizes)[:-1], axis=axis)
 
 
-def create_bdiag_mat(mats: list[np.ndarray]) -> np.ndarray:
+def create_bdiag_mat(mats: list[NDArray]) -> NDArray:
     if not all([mat.ndim == 2 for mat in mats]):
         raise ValueError("`mats` must be a list of matrices.")
     row_sizes = [mat.shape[0] for mat in mats]
