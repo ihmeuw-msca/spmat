@@ -2,7 +2,7 @@
 Sum of diagonal and low rank matrices
 """
 
-from typing import Iterable, List
+from collections.abc import Iterable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -150,7 +150,7 @@ class BILMat:
         self._w = -self._v / (1 + self._v)
 
     @property
-    def lmat_blocks(self) -> List[NDArray]:
+    def lmat_blocks(self) -> list[NDArray]:
         return np.split(self.lmats, np.cumsum(self.dsizes)[:-1], axis=0)
 
     @property
@@ -388,8 +388,8 @@ class BDLMat:
     def num_blocks(self) -> int:
         return self.dsizes.size
 
-    def dot(self, x: NDArray) -> NDArray:
-        """Inverse dot product with vector or matrix
+    def dot(self, x: Iterable) -> NDArray:
+        """Dot product with vector or matrix
 
         Parameters
         ----------
@@ -407,7 +407,7 @@ class BDLMat:
         x = (x.T * self.sdvecs).T
         return x
 
-    def invdot(self, x: NDArray) -> NDArray:
+    def invdot(self, x: Iterable) -> NDArray:
         """Inverse dot product with vector or matrix
 
         Parameters
