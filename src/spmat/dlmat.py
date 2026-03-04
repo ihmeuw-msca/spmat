@@ -2,10 +2,10 @@
 Sum of diagonal and low rank matrices
 """
 
-from typing import Iterable, List
+from collections.abc import Sequence
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from scipy.linalg import block_diag
 
 from spmat import linalg, utils
@@ -38,11 +38,11 @@ class ILMat:
 
     """
 
-    def __init__(self, lmat: Iterable):
+    def __init__(self, lmat: ArrayLike):
         """
         Parameters
         ----------
-        lmat : Iterable
+        lmat : ArrayLike
 
         Raises
         ------
@@ -66,12 +66,12 @@ class ILMat:
     def invmat(self) -> NDArray:
         return np.identity(self.dsize) + (self._u * self._w) @ self._u.T
 
-    def dot(self, x: Iterable) -> NDArray:
+    def dot(self, x: ArrayLike) -> NDArray:
         """Dot product with vector or matrix
 
         Parameters
         ----------
-        x : Iterable
+        x : ArrayLike
             Vector or matrix
 
         Returns
@@ -82,12 +82,12 @@ class ILMat:
         x = utils.to_numpy(x, ndim=(1, 2))
         return x + (self._u * self._v) @ (self._u.T @ x)
 
-    def invdot(self, x: Iterable) -> NDArray:
+    def invdot(self, x: ArrayLike) -> NDArray:
         """Inverse dot product with vector or matrix
 
         Parameters
         ----------
-        x : Iterable
+        x : ArrayLike
             Vector or matrix
 
         Returns
@@ -136,7 +136,7 @@ class BILMat:
     Block ILMat.
     """
 
-    def __init__(self, lmats: Iterable, dsizes: Iterable):
+    def __init__(self, lmats: ArrayLike, dsizes: Sequence[int]):
         self.lmats = np.ascontiguousarray(lmats)
         self.dsizes = np.asarray(dsizes, dtype=np.int64)
         self.lranks = np.minimum(self.dsizes, self.lmats.shape[1]).astype(np.int64)
@@ -150,7 +150,7 @@ class BILMat:
         self._w = -self._v / (1 + self._v)
 
     @property
-    def lmat_blocks(self) -> List[NDArray]:
+    def lmat_blocks(self) -> list[NDArray]:
         return np.split(self.lmats, np.cumsum(self.dsizes)[:-1], axis=0)
 
     @property
@@ -171,12 +171,12 @@ class BILMat:
             ]
         )
 
-    def dot(self, x: Iterable) -> NDArray:
+    def dot(self, x: ArrayLike) -> NDArray:
         x = np.ascontiguousarray(x)
         dotfun = linalg.block_mvdot if x.ndim == 1 else linalg.block_mmdot
         return dotfun(self._u, self._v, x, self.dsizes, self.lranks)
 
-    def invdot(self, x: Iterable) -> NDArray:
+    def invdot(self, x: ArrayLike) -> NDArray:
         x = np.ascontiguousarray(x)
         dotfun = linalg.block_mvdot if x.ndim == 1 else linalg.block_mmdot
         return dotfun(self._u, self._w, x, self.dsizes, self.lranks)
@@ -223,13 +223,13 @@ class DLMat:
         Log determinant of the matrix.
     """
 
-    def __init__(self, dvec: Iterable, lmat: Iterable):
+    def __init__(self, dvec: ArrayLike, lmat: ArrayLike):
         """
         Parameters
         ----------
-        dvec : Iterable
+        dvec : ArrayLike
             Diagonal vector.
-        lmat : Iterable
+        lmat : ArrayLike
             Low rank matrix.
 
         Raises
@@ -263,12 +263,12 @@ class DLMat:
     def invmat(self) -> NDArray:
         return self.ilmat.invmat / (self.sdvec[:, np.newaxis] * self.sdvec)
 
-    def dot(self, x: Iterable) -> NDArray:
-        """Inverse dot product with vector or matrix
+    def dot(self, x: ArrayLike) -> NDArray:
+        """Dot product with vector or matrix
 
         Parameters
         ----------
-        x : Iterable
+        x : ArrayLike
             Vector or matrix
 
         Returns
@@ -281,12 +281,12 @@ class DLMat:
         x = (x.T * self.sdvec).T
         return x
 
-    def invdot(self, x: Iterable) -> NDArray:
+    def invdot(self, x: ArrayLike) -> NDArray:
         """Inverse dot product with vector or matrix
 
         Parameters
         ----------
-        x : Iterable
+        x : ArrayLike
             Vector or matrix
 
         Returns
@@ -366,7 +366,7 @@ class BDLMat:
         Log determinant of the matrix.
     """
 
-    def __init__(self, dvecs: Iterable, lmats: Iterable, dsizes: Iterable):
+    def __init__(self, dvecs: ArrayLike, lmats: ArrayLike, dsizes: Sequence[int]):
         self.dvecs = np.ascontiguousarray(dvecs)
         self.lmats = np.ascontiguousarray(lmats)
         self.dsizes = np.ascontiguousarray(dsizes, dtype=np.int64)
@@ -388,12 +388,12 @@ class BDLMat:
     def num_blocks(self) -> int:
         return self.dsizes.size
 
-    def dot(self, x: NDArray) -> NDArray:
-        """Inverse dot product with vector or matrix
+    def dot(self, x: ArrayLike) -> NDArray:
+        """Dot product with vector or matrix
 
         Parameters
         ----------
-        x : Iterable
+        x : ArrayLike
             Vector or matrix
 
         Returns
@@ -407,12 +407,12 @@ class BDLMat:
         x = (x.T * self.sdvecs).T
         return x
 
-    def invdot(self, x: NDArray) -> NDArray:
+    def invdot(self, x: ArrayLike) -> NDArray:
         """Inverse dot product with vector or matrix
 
         Parameters
         ----------
-        x : Iterable
+        x : ArrayLike
             Vector or matrix
 
         Returns
